@@ -87,6 +87,16 @@ public class FixedExpenseAutoService {
         int created = 0;
         int skipped = 0;
 
+        if (fixedList == null || fixedList.isEmpty()) {
+            String msg = "활성 고정지출 항목이 없습니다.";
+            if (updateLastRun) {
+                setting.setLastRunAt(LocalDateTime.now());
+                setting.setLastRunMessage(msg);
+                settingRepository.save(setting);
+            }
+            return new FixedExpenseAutoGenerateResult(0, 0, msg);
+        }
+
         for (FixedExpense fe : fixedList) {
             if (fe == null || fe.getId() == null) {
                 skipped++;

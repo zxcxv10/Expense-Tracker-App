@@ -5,6 +5,27 @@ let currentYear = new Date().getFullYear();
 let currentProvider = 'TOSS';
 let bankMonthState = {}; // { [provider:string]: { [month:number]: { fileName: string, rows: any[], errorMessage?: string } } }
 
+let lastAuthPromptAt = 0;
+function promptLoginOnce() {
+    const now = Date.now();
+    // Always show a visible hint (toast + open modal), but debounce the blocking alert.
+    try {
+        showToast('로그인이 필요합니다.', 'error');
+    } catch {
+        // ignore
+    }
+    try {
+        openAuthModal('login');
+    } catch {
+        // ignore
+    }
+    if (now - lastAuthPromptAt < 1500) {
+        return;
+    }
+    lastAuthPromptAt = now;
+    alert('로그인이 필요합니다.');
+}
+
 function initFixedExpenseAutoMonthSelectors(yearSel, monthSel) {
     if (!yearSel || !monthSel) return;
     if (yearSel.options && yearSel.options.length > 0 && monthSel.options && monthSel.options.length > 0) return;
@@ -376,8 +397,7 @@ async function updateFixedExpenseStatus(id, nextStatus) {
 async function apiFetch(url, options) {
     const res = await fetch(url, { ...(options || {}), credentials: 'same-origin' });
     if (res.status === 401) {
-        alert('로그인이 필요합니다.');
-        openAuthModal('login');
+        promptLoginOnce();
         throw new Error('UNAUTHORIZED');
     }
     return res;
@@ -1651,14 +1671,24 @@ async function loadFixedExpenseAutoSetting() {
                 if (created === 0 && skipped > 0) {
                     showToast('이미 이번달 고정지출 내역이 생성되어 있습니다.', 'success');
                 } else {
-                    showToast(d?.message || `${created}건 생성 완료`, 'success');
+                    const msg = d?.message || `${created}건 생성 완료`;
+                    showToast(msg, 'success');
+                    if (String(msg).includes('활성 고정지출 항목이 없습니다')) {
+                        alert(msg);
+                    }
                 }
                 await loadFixedExpenseAutoSetting();
             } catch (err) {
-                if (String(err?.message || '') === 'UNAUTHORIZED') return;
-                const msg = err?.message || '생성에 실패했습니다.';
+                if (String(err?.message || '') === 'UNAUTHORIZED') {
+                    showToast('로그인이 필요합니다.', 'error');
+                    return;
+                }
+                const raw = String(err?.message || '생성에 실패했습니다.');
+                const msg = raw === 'Failed to fetch' ? '서버에 연결할 수 없습니다.' : raw;
                 showToast(msg, 'error');
-                alert(msg);
+                if (raw !== 'Failed to fetch') {
+                    alert(msg);
+                }
             } finally {
                 done();
             }
@@ -1680,10 +1710,16 @@ async function loadFixedExpenseAutoSetting() {
                 await loadDashboard();
                 await loadFixedExpenses();
             } catch (err) {
-                if (String(err?.message || '') === 'UNAUTHORIZED') return;
-                const msg = err?.message || '확정에 실패했습니다.';
+                if (String(err?.message || '') === 'UNAUTHORIZED') {
+                    showToast('로그인이 필요합니다.', 'error');
+                    return;
+                }
+                const raw = String(err?.message || '확정에 실패했습니다.');
+                const msg = raw === 'Failed to fetch' ? '서버에 연결할 수 없습니다.' : raw;
                 showToast(msg, 'error');
-                alert(msg);
+                if (raw !== 'Failed to fetch') {
+                    alert(msg);
+                }
             } finally {
                 done();
             }
@@ -1704,10 +1740,16 @@ async function loadFixedExpenseAutoSetting() {
                 await loadDashboard();
                 await loadFixedExpenses();
             } catch (err) {
-                if (String(err?.message || '') === 'UNAUTHORIZED') return;
-                const msg = err?.message || '확정 취소에 실패했습니다.';
+                if (String(err?.message || '') === 'UNAUTHORIZED') {
+                    showToast('로그인이 필요합니다.', 'error');
+                    return;
+                }
+                const raw = String(err?.message || '확정 취소에 실패했습니다.');
+                const msg = raw === 'Failed to fetch' ? '서버에 연결할 수 없습니다.' : raw;
                 showToast(msg, 'error');
-                alert(msg);
+                if (raw !== 'Failed to fetch') {
+                    alert(msg);
+                }
             } finally {
                 done();
             }
