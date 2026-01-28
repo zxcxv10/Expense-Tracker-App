@@ -216,12 +216,20 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     flex: 1;
     background-color: #ffffff;
     overflow: visible;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .content-container {
     padding: 30px;
-    max-width: 900px;
+    max-width: 1280px;
     margin: 0 auto;
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .content-panel {
@@ -230,6 +238,26 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
 
 .content-panel.active {
     display: block;
+}
+
+#fixed-expense-content.active {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#fixed-expense-content .form-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#fixed-expense-content .panel-tab-content.active {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .panel-header {
@@ -255,6 +283,20 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     border-radius: 6px;
     padding: 25px;
     margin-bottom: 20px;
+}
+
+.form-section-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+}
+
+.form-section-header .execute-btn {
+    width: auto;
+    min-width: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 8px;
 }
 
 .preview-subtitle {
@@ -294,45 +336,165 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     color: #6b7280;
 }
 
- .dashboard-controls {
-     display: flex;
-     align-items: center;
-     gap: 12px;
-     flex-wrap: wrap;
-     margin-bottom: 18px;
- }
+.dashboard-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 18px;
+}
 
- .dashboard-controls label {
-     font-size: 13px;
-     color: #374151;
-     font-weight: 600;
- }
+.dashboard-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
 
- .dashboard-controls select {
-     width: auto;
-     min-width: 120px;
- }
+.dashboard-tab {
+    padding: 8px 12px;
+    font-size: 13px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #ffffff;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #374151;
+}
 
- .dashboard-controls button {
-     width: auto;
-     padding: 10px 14px;
-     border-radius: 6px;
-     border: none;
-     background: #2563eb;
-     color: #ffffff;
-     font-weight: 700;
-     cursor: pointer;
- }
+.dashboard-tab.active {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #1d4ed8;
+    font-weight: 700;
+}
 
- .dashboard-controls button:hover {
-     background: #1d4ed8;
- }
+.dashboard-tab-content {
+    display: none;
+}
 
- .dashboard-charts {
-     display: grid;
-     grid-template-columns: 1fr;
-     gap: 16px;
- }
+.dashboard-tab-content.active {
+    display: block;
+}
+
+.calendar-panel {
+    background: #ffffff;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.calendar-title {
+    font-weight: 700;
+    color: #111827;
+}
+
+.calendar-nav {
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 8px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.calendar-weekdays > div {
+    text-align: center;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-cell {
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    border-radius: 10px;
+    min-height: 86px;
+    padding: 8px;
+    background: rgba(248, 250, 252, 0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.calendar-cell.muted {
+    opacity: 0.35;
+}
+
+.calendar-day {
+    font-weight: 700;
+    font-size: 13px;
+    color: #111827;
+}
+
+.calendar-amounts {
+    display: grid;
+    gap: 2px;
+    font-size: 12px;
+}
+
+.calendar-income {
+    color: #059669;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-expense {
+    color: #dc2626;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-hint {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.dashboard-controls select {
+    width: auto;
+    min-width: 120px;
+}
+
+.dashboard-controls button {
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.dashboard-controls button:hover {
+    background: #1d4ed8;
+}
+
+.dashboard-charts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
 
  .dashboard-top-charts {
      display: grid;
@@ -514,6 +676,38 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     flex-wrap: wrap;
 }
 
+/* 연도 탭 */
+.year-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.year-tab {
+    padding: 8px 14px;
+    background-color: rgba(241, 245, 249, 0.8);
+    border: 1px solid rgba(229, 231, 235, 0.6);
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.year-tab:hover {
+    background-color: rgba(229, 231, 235, 0.9);
+    border-color: rgba(209, 213, 219, 0.8);
+    color: #374151;
+}
+
+.year-tab.active {
+    background-color: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.45);
+    color: #16a34a;
+}
+
 .month-tab {
     padding: 8px 14px;
     background-color: rgba(241, 245, 249, 0.8);
@@ -543,6 +737,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 6px;
 }
 
 .bank-tab {
@@ -667,6 +862,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
 input[type="text"],
 input[type="date"],
 input[type="password"],
+input[type="number"],
 select {
     width: 100%;
     padding: 10px 12px;
@@ -681,6 +877,7 @@ select {
 input[type="text"]:focus,
 input[type="date"]:focus,
 input[type="password"]:focus,
+input[type="number"]:focus,
 select:focus {
     outline: none;
     border-color: rgba(59, 130, 246, 0.5);
@@ -897,6 +1094,68 @@ select option {
     border-radius: 10px;
 }
 
+.fixed-expense-table-wrap {
+    overflow: visible;
+    flex: 1;
+    min-height: 0;
+}
+
+.panel-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    margin: 0 0 14px 0;
+}
+
+.panel-tab {
+    padding: 8px 12px;
+    font-size: 13px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #ffffff;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #374151;
+}
+
+.panel-tab.active {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.panel-tab-content {
+    display: none;
+}
+
+.panel-tab-content.active {
+    display: block;
+}
+
+.preview-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: #4b5563;
+    margin: 8px 0 6px;
+}
+
+.preview-meta .count-strong {
+    font-weight: 700;
+    color: #111827;
+}
+
+.preview-meta .count-error {
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.preview-hint {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
 .preview-table {
     width: 100%;
     border-collapse: collapse;
@@ -1082,12 +1341,32 @@ select option {
     display: none;
     margin-left: 12px;
     padding: 4px 10px;
-    background: #10b981;
-    color: #ffffff;
+    border-radius: 999px;
     font-size: 12px;
-    font-weight: 600;
-    border-radius: 12px;
-    line-height: 1;
+    font-weight: 700;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    color: #16a34a;
+    vertical-align: middle;
+}
+
+.unconfirm-btn {
+    display: none;
+    margin-left: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(239, 68, 68, 0.10);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #dc2626;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.unconfirm-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* 분석 플레이스홀더 */
@@ -1141,6 +1420,507 @@ select option {
     font-size: 16px;
     font-weight: 600;
     color: #1f2937;
+}
+
+/* 고정 지출 패널 */
+.fixed-expense-grid {
+    display: block;
+}
+
+.fixed-expense-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.card-title {
+    margin: 0 0 8px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.card-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.fixed-expense-card textarea {
+    width: 100%;
+    resize: vertical;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    background: rgba(248, 250, 252, 0.9);
+    font-size: 14px;
+    color: #1f2937;
+}
+
+.fixed-expense-card textarea:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.fixed-expense-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.execute-btn.outline {
+    background: transparent;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
+}
+
+.execute-btn.outline:hover {
+    background: rgba(15, 23, 42, 0.04);
+}
+
+.card-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.fixed-expense-header-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.compact-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+.fixed-expense-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.fixed-expense-filter label {
+    white-space: nowrap;
+}
+
+.fixed-expense-filter select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    font-size: 13px;
+}
+
+.fixed-expense-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 12px 0 14px 0;
+}
+
+.fixed-expense-summary-card {
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: rgba(248, 250, 252, 0.9);
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.fixed-expense-summary-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.fixed-expense-summary-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #111827;
+    letter-spacing: -0.2px;
+}
+
+.fixed-expense-auto {
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.fixed-expense-auto-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.fixed-expense-auto-row + .fixed-expense-auto-row {
+    margin-top: 10px;
+}
+
+.fixed-expense-auto-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #111827;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+.fixed-expense-auto-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.help-tip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(209, 213, 219, 0.9);
+    background: rgba(248, 250, 252, 0.95);
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: help;
+    position: relative;
+    user-select: none;
+}
+
+.help-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 320px;
+    max-width: min(320px, 70vw);
+    background: rgba(17, 24, 39, 0.96);
+    color: #ffffff;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.35;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+    z-index: 30;
+}
+
+.help-tip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.btn-with-tip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fixed-expense-auto-actions .execute-btn {
+    width: auto;
+    margin-top: 0;
+}
+
+.fixed-expense-auto-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.fixed-expense-auto-actions-right {
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.fixed-expense-auto-meta {
+    text-align: right;
+    font-size: 12px;
+    color: #6b7280;
+    max-width: 60%;
+}
+
+.fixed-expense-auto-month {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.fixed-expense-auto-month label {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.fixed-expense-auto-month select {
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    font-size: 13px;
+}
+
+@media (max-width: 520px) {
+    .fixed-expense-auto-month {
+        flex-wrap: wrap;
+        white-space: normal;
+    }
+}
+
+.fixed-expense-auto-table-wrap {
+    margin-top: 10px;
+}
+
+.toast {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    max-width: min(420px, calc(100vw - 36px));
+    background: rgba(17, 24, 39, 0.96);
+    color: #ffffff;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.35;
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.24);
+    z-index: 100;
+}
+
+.toast.toast-success {
+    background: rgba(17, 94, 89, 0.96);
+}
+
+.toast.toast-error {
+    background: rgba(153, 27, 27, 0.96);
+}
+
+.execute-btn:disabled,
+.edit-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.status-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-switch .switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+}
+
+.status-switch .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.status-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d5db;
+    transition: .2s;
+    border-radius: 999px;
+}
+
+.status-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 999px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+.status-switch input:checked + .slider {
+    background-color: #16a34a;
+}
+
+.status-switch input:checked + .slider:before {
+    transform: translateX(18px);
+}
+
+.status-switch input:disabled + .slider {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+#fixed-expense-auto-modal .modal {
+    max-width: 920px;
+}
+
+#fixed-expense-auto-modal .modal-body {
+    max-height: min(70vh, 640px);
+    overflow: auto;
+}
+
+.fixed-expense-auto-message {
+    margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .fixed-expense-auto-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .fixed-expense-auto-meta {
+        text-align: left;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 900px) {
+    .fixed-expense-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fixed-expense-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed;
+    min-width: 0;
+}
+
+.fixed-expense-table th,
+.fixed-expense-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fixed-expense-table td:nth-child(2) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fixed-expense-table th.memo-col,
+.fixed-expense-table td.memo-col {
+    width: 22%;
+}
+
+.fixed-expense-table td.memo-col {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fixed-expense-table th:nth-child(1),
+.fixed-expense-table td:nth-child(1) {
+    width: 16%;
+}
+
+.fixed-expense-table th:nth-child(2),
+.fixed-expense-table td:nth-child(2) {
+    width: 12%;
+}
+
+.fixed-expense-table th:nth-child(3),
+.fixed-expense-table td:nth-child(3) {
+    width: 12%;
+}
+
+.fixed-expense-table th:nth-child(4),
+.fixed-expense-table td:nth-child(4) {
+    width: 10%;
+}
+
+.fixed-expense-table th:nth-child(5),
+.fixed-expense-table td:nth-child(5) {
+    width: 12%;
+}
+
+.fixed-expense-table th:nth-child(6),
+.fixed-expense-table td:nth-child(6) {
+    width: 22%;
+}
+
+.fixed-expense-table th:nth-child(7),
+.fixed-expense-table td:nth-child(7) {
+    width: 10%;
+}
+
+.fixed-expense-table th:nth-child(8),
+.fixed-expense-table td:nth-child(8) {
+    width: 12%;
+}
+
+.fixed-expense-table th {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: none;
+}
+
+.fixed-expense-table th.sortable {
+    cursor: pointer;
+}
+
+.fixed-expense-table th.sortable[data-sort-dir="asc"]::after {
+    content: " ▲";
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.fixed-expense-table th.sortable[data-sort-dir="desc"]::after {
+    content: " ▼";
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.fixed-expense-table .empty-row td {
+    text-align: center;
+    color: #9ca3af;
+    padding: 24px 12px;
 }
 
 #category-bar-chart {

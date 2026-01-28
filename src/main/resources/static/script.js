@@ -5,7 +5,373 @@ let currentYear = new Date().getFullYear();
 let currentProvider = 'TOSS';
 let bankMonthState = {}; // { [provider:string]: { [month:number]: { fileName: string, rows: any[], errorMessage?: string } } }
 
+function initFixedExpenseAutoMonthSelectors(yearSel, monthSel) {
+    if (!yearSel || !monthSel) return;
+    if (yearSel.options && yearSel.options.length > 0 && monthSel.options && monthSel.options.length > 0) return;
+
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+
+    const prevYear = yearSel.value;
+    const prevMonth = monthSel.value;
+
+    yearSel.innerHTML = '';
+    for (let y = curYear - 2; y <= curYear + 1; y++) {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        if (String(y) === String(prevYear || curYear)) opt.selected = true;
+        yearSel.appendChild(opt);
+    }
+
+    monthSel.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = String(m);
+        opt.textContent = `${m}월`;
+        if (String(m) === String(prevMonth || curMonth)) opt.selected = true;
+        monthSel.appendChild(opt);
+    }
+}
+
+async function loadFixedExpenseAutoMonthTransactions(year, month, summaryEl) {
+    const table = document.getElementById('fixed-expense-auto-table');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    try {
+        if (summaryEl) {
+            summaryEl.textContent = `${year}년 ${month}월: 불러오는 중...`;
+        }
+        const r = await apiFetch(`/api/fixed-expenses/auto/transactions?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`);
+        const d = await r.json();
+        if (!r.ok || !d?.success) {
+            throw new Error(d?.error || '내역을 불러오지 못했습니다.');
+        }
+
+        const items = Array.isArray(d.items) ? d.items : [];
+        const unconfirmed = Number(d.unconfirmedCount ?? 0);
+        const confirmed = Number(d.confirmedCount ?? 0);
+
+        fixedExpenseMonthLocked = confirmed > 0;
+        renderFixedExpenseTable(fixedExpenseItems);
+
+        applyFixedExpenseAutoButtonState({ total: items.length, unconfirmed, confirmed });
+
+        if (summaryEl) {
+            summaryEl.textContent = `${year}년 ${month}월: 총 ${items.length}건 (미확정 ${unconfirmed} / 확정 ${confirmed})`;
+        }
+
+        tbody.innerHTML = '';
+        if (items.length === 0) {
+            const tr = document.createElement('tr');
+            tr.className = 'empty-row';
+            tr.innerHTML = '<td colspan="5">선택한 월의 고정지출 생성 내역이 없습니다.</td>';
+            tbody.appendChild(tr);
+            return;
+        }
+
+        for (const it of items) {
+            const tr = document.createElement('tr');
+            const amt = typeof it.amount === 'number' ? it.amount : null;
+            const absAmt = amt == null ? '' : formatNumber(Math.abs(amt));
+            const conf = String(it.confirmed || 'N').toUpperCase() === 'Y' ? 'Y' : 'N';
+            tr.innerHTML = `
+                <td>${it.date || ''}</td>
+                <td>${escapeHtml(it.description || '')}</td>
+                <td>${escapeHtml(it.category || '')}</td>
+                <td style="text-align:right;">${absAmt}</td>
+                <td style="text-align:center;">${conf}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    } catch (err) {
+        if (String(err?.message || '') === 'UNAUTHORIZED') return;
+        fixedExpenseMonthLocked = false;
+        renderFixedExpenseTable(fixedExpenseItems);
+        applyFixedExpenseAutoButtonState({ total: 0, unconfirmed: 0, confirmed: 0 });
+        const msg = err?.message ? String(err.message) : '내역을 불러오지 못했습니다.';
+        if (summaryEl) summaryEl.textContent = `${year}년 ${month}월: ${msg}`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${escapeHtml(msg)}</td></tr>`;
+    }
+}
+
+function applyFixedExpenseAutoButtonState(state) {
+    const genBtn = document.getElementById('fixed-expense-auto-generate-btn');
+    const confirmBtn = document.getElementById('fixed-expense-auto-confirm-btn');
+    const unconfirmBtn = document.getElementById('fixed-expense-auto-unconfirm-btn');
+    if (!genBtn || !confirmBtn || !unconfirmBtn) return;
+
+    const total = Number(state?.total ?? 0);
+    const unconfirmed = Number(state?.unconfirmed ?? 0);
+    const confirmed = Number(state?.confirmed ?? 0);
+
+    // C안 규칙
+    // - total==0: 생성만 가능
+    // - unconfirmed>0: 확정 가능
+    // - confirmed>0: 확정 취소 가능
+    genBtn.disabled = !(total === 0 || unconfirmed > 0) ? true : false;
+    confirmBtn.disabled = !(unconfirmed > 0);
+    unconfirmBtn.disabled = !(confirmed > 0);
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function formatNumber(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '';
+    return n.toLocaleString('ko-KR');
+}
+
+let toastTimer = null;
+function showToast(message, type) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    if (toastTimer) {
+        clearTimeout(toastTimer);
+        toastTimer = null;
+    }
+    el.className = `toast${type ? ' toast-' + type : ''}`;
+    el.textContent = message || '';
+    el.style.display = '';
+    toastTimer = setTimeout(() => {
+        el.style.display = 'none';
+    }, 2400);
+}
+
+function setButtonLoading(btn, loadingText) {
+    if (!btn) return () => {};
+    const prevDisabled = btn.disabled;
+    const prevText = btn.textContent;
+    btn.disabled = true;
+    if (loadingText) btn.textContent = loadingText;
+    return () => {
+        btn.disabled = prevDisabled;
+        btn.textContent = prevText;
+    };
+}
+
+function setupDashboardTabs() {
+    const container = document.getElementById('dashboard-tabs');
+    if (!container) return;
+    const tabs = container.querySelectorAll('.dashboard-tab');
+    if (!tabs.length) return;
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const key = tab.getAttribute('data-tab');
+            if (!key) return;
+            tabs.forEach(t => t.classList.toggle('active', t === tab));
+            const panels = document.querySelectorAll('#dashboard-content .dashboard-tab-content');
+            panels.forEach(panel => {
+                panel.classList.toggle('active', panel.getAttribute('data-tab-panel') === key);
+            });
+            if (key === 'calendar') {
+                loadDashboardCalendar();
+            }
+        });
+    });
+}
+
+function setupDashboardCalendarNav() {
+    const prevBtn = document.getElementById('calendar-prev');
+    const nextBtn = document.getElementById('calendar-next');
+    const yearEl = document.getElementById('dashboard-year');
+    const monthEl = document.getElementById('dashboard-month');
+    if (!prevBtn || !nextBtn || !yearEl || !monthEl) return;
+
+    const shift = (delta) => {
+        let y = Number(yearEl.value);
+        let m = Number(monthEl.value);
+        if (!Number.isFinite(y)) return;
+        if (!Number.isFinite(m) || m === 0) {
+            m = currentMonth;
+        }
+        m += delta;
+        if (m < 1) {
+            m = 12;
+            y -= 1;
+        } else if (m > 12) {
+            m = 1;
+            y += 1;
+        }
+
+        yearEl.value = String(y);
+        monthEl.value = String(m);
+        loadDashboardCalendar();
+    };
+
+    prevBtn.addEventListener('click', () => shift(-1));
+    nextBtn.addEventListener('click', () => shift(1));
+}
+
+async function loadDashboardCalendar() {
+    const yearEl = document.getElementById('dashboard-year');
+    const monthEl = document.getElementById('dashboard-month');
+    const providerEl = document.getElementById('dashboard-provider');
+    const titleEl = document.getElementById('calendar-title');
+    const gridEl = document.getElementById('dashboard-calendar-grid');
+    const hintEl = document.getElementById('calendar-hint');
+    if (!yearEl || !monthEl || !providerEl || !titleEl || !gridEl || !hintEl) return;
+
+    const year = Number(yearEl.value);
+    const month = Number(monthEl.value);
+    const provider = String(providerEl.value || 'ALL').trim().toUpperCase();
+
+    titleEl.textContent = Number.isFinite(year) && Number.isFinite(month) && month >= 1 && month <= 12
+            ? `${year}년 ${month}월`
+            : '-';
+
+    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+        gridEl.innerHTML = '';
+        hintEl.style.display = '';
+        hintEl.textContent = '월(상세)을 선택하면 달력 집계를 볼 수 있습니다.';
+        return;
+    }
+
+    hintEl.style.display = 'none';
+    try {
+        const res = await apiFetch(`/api/dashboard/daily?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}&provider=${encodeURIComponent(provider)}`);
+        const data = await res.json();
+        if (!res.ok || !data?.success) {
+            throw new Error(data?.error || '달력 데이터를 불러오지 못했습니다.');
+        }
+        renderDashboardCalendar(data);
+    } catch (e) {
+        if (String(e?.message || '') === 'UNAUTHORIZED') return;
+        gridEl.innerHTML = '';
+        hintEl.style.display = '';
+        hintEl.textContent = e?.message || '달력 로딩 실패';
+    }
+}
+
+function renderDashboardCalendar(data) {
+    const gridEl = document.getElementById('dashboard-calendar-grid');
+    const hintEl = document.getElementById('calendar-hint');
+    if (!gridEl || !hintEl) return;
+
+    const year = Number(data?.year);
+    const month = Number(data?.month);
+    const days = Array.isArray(data?.days) ? data.days : [];
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+
+    const first = new Date(year, month - 1, 1);
+    const startDow = first.getDay();
+    const lastDay = new Date(year, month, 0).getDate();
+
+    const byDay = {};
+    days.forEach(d => {
+        const key = Number(d?.day);
+        if (!Number.isFinite(key)) return;
+        byDay[key] = {
+            income: Number(d?.income ?? 0),
+            expense: Number(d?.expense ?? 0)
+        };
+    });
+
+    const cells = [];
+    const totalCells = 42;
+    for (let i = 0; i < totalCells; i++) {
+        const dayNum = i - startDow + 1;
+        const isCurrent = dayNum >= 1 && dayNum <= lastDay;
+        const info = isCurrent ? (byDay[dayNum] || { income: 0, expense: 0 }) : { income: 0, expense: 0 };
+        const incomeText = info.income > 0 ? `수입 ${info.income.toLocaleString()}` : '';
+        const expenseText = info.expense > 0 ? `지출 ${info.expense.toLocaleString()}` : '';
+        const title = isCurrent
+                ? `${dayNum}일\n${incomeText}\n${expenseText}`.trim()
+                : '';
+        cells.push(`
+            <div class="calendar-cell ${isCurrent ? '' : 'muted'}" title="${title}">
+                <div class="calendar-day">${isCurrent ? dayNum : ''}</div>
+                <div class="calendar-amounts">
+                    <div class="calendar-income">${incomeText}</div>
+                    <div class="calendar-expense">${expenseText}</div>
+                </div>
+            </div>
+        `);
+    }
+    gridEl.innerHTML = cells.join('');
+    hintEl.style.display = 'none';
+}
+
+async function loadConfirmedMonthForYear(provider, year, month) {
+    const p = String(provider || '').trim().toUpperCase();
+    const y = Number(year);
+    const m = Number(month);
+    if (!p || !y || y < 1900 || y > 2100 || !m || m < 1 || m > 12) {
+        return;
+    }
+
+    try {
+        const res = await apiFetch(`/api/import/confirmed?provider=${encodeURIComponent(p)}&year=${y}&month=${m}`);
+        const result = await res.json();
+        if (!res.ok || !result?.success) {
+            setConfirmedLock(false);
+            return;
+        }
+
+        if (result.confirmed) {
+            previewRows = (result.rows || []).map(r => ({
+                date: r.date ?? '',
+                description: r.description ?? '',
+                amount: (typeof r.amount === 'number') ? r.amount : null,
+                category: r.category ?? '',
+                _errors: []
+            }));
+            renderPreviewTable(previewRows);
+            updatePreviewProviderInfo();
+            setPreviewDataVisible(true);
+            setConfirmedLock(true);
+            return;
+        }
+
+        setConfirmedLock(false);
+    } catch {
+        // ignore
+    }
+}
+
 let isLoggedIn = false;
+let fixedExpenseEditingId = null;
+let fixedExpenseItems = [];
+let fixedExpenseSortKey = 'title';
+let fixedExpenseSortDir = 'asc';
+let fixedExpenseMonthLocked = false;
+
+async function updateFixedExpenseStatus(id, nextStatus) {
+    const item = fixedExpenseItems.find(e => e.id === id);
+    if (!item) {
+        throw new Error('해당 항목을 찾을 수 없습니다.');
+    }
+    const payload = {
+        id: item.id,
+        title: item.title,
+        account: item.account,
+        amount: item.amount,
+        category: item.category,
+        billingDay: item.billingDay,
+        memo: item.memo,
+        status: nextStatus
+    };
+
+    const res = await apiFetch('/api/fixed-expenses/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.success) {
+        throw new Error(data?.error || '상태 변경에 실패했습니다.');
+    }
+}
 
 async function apiFetch(url, options) {
     const res = await fetch(url, { ...(options || {}), credentials: 'same-origin' });
@@ -29,7 +395,7 @@ function initDashboardControls() {
 
     yearEl.innerHTML = '';
     const nowY = new Date().getFullYear();
-    for (let y = nowY - 3; y <= nowY + 1; y++) {
+    for (let y = nowY - 5; y <= nowY + 5; y++) {
         const opt = document.createElement('option');
         opt.value = String(y);
         opt.textContent = `${y}년`;
@@ -55,6 +421,9 @@ function initDashboardControls() {
     loadBtn.addEventListener('click', () => {
         loadDashboard();
     });
+
+    setupDashboardTabs();
+    setupDashboardCalendarNav();
 
     if (catModeEl) {
         catModeEl.addEventListener('change', () => {
@@ -127,11 +496,20 @@ async function loadDashboard() {
         if (showProviderChart) {
             renderDashboardProviderMonthlyExpense(monthly);
         }
+
+        // 달력 탭이 활성화되어 있으면 같이 갱신
+        const calendarPanel = document.querySelector('#dashboard-content .dashboard-tab-content[data-tab-panel="calendar"]');
+        if (calendarPanel && calendarPanel.classList.contains('active')) {
+            loadDashboardCalendar();
+        }
     } catch (e) {
         hideLoading();
         chartsWrap.style.display = 'none';
         if (summaryWrap) summaryWrap.style.display = 'none';
         placeholder.style.display = '';
+        if (String(e?.message || '') === 'UNAUTHORIZED') {
+            return;
+        }
         alert(e?.message || '대시보드 로딩 실패');
     }
 }
@@ -351,7 +729,7 @@ let dashboardMonthlyChart = null;
 let dashboardProviderExpenseChart = null;
 let dashboardCategoryChart = null;
 
-const supportedProviders = ['TOSS', 'NH', 'KB', 'HYUNDAI'];
+const supportedProviders = ['TOSS', 'NH', 'KB', 'HYUNDAI', 'FIXED'];
 
 function hasAnyPreviewDataRow(rows) {
     if (!Array.isArray(rows) || rows.length === 0) return false;
@@ -429,6 +807,8 @@ function setConfirmedLock(confirmed) {
         }
     }
 
+    syncUnconfirmButtonVisibility();
+
     const uploadBtn = document.getElementById('upload-next-btn');
     const saveBtn = document.getElementById('preview-save-btn');
     const dropzone = document.getElementById('upload-dropzone');
@@ -488,9 +868,11 @@ async function loadConfirmedMonthIfAny(provider, month) {
             : [];
 
         const yearsToTry = Array.from(new Set([
-            currentYear,
+            currentYear - 2,
             currentYear - 1,
+            currentYear,
             currentYear + 1,
+            currentYear + 2,
             ...yearsFromRows
         ])).filter(y => Number.isFinite(y) && y >= 1900 && y <= 2100);
 
@@ -503,6 +885,7 @@ async function loadConfirmedMonthIfAny(provider, month) {
 
             if (result.confirmed) {
                 currentYear = y;
+                syncPreviewYearTabs();
                 previewRows = (result.rows || []).map(r => ({
                     date: r.date ?? '',
                     description: r.description ?? '',
@@ -525,9 +908,11 @@ async function loadConfirmedMonthIfAny(provider, month) {
     }
 }
 
-function saveBankMonthState(provider, month) {
+function saveBankMonthState(provider, year, month) {
     const p = String(provider || '').trim().toUpperCase();
+    const y = Number(year);
     if (!p) return;
+    if (!y || y < 1900 || y > 2100) return;
     if (!month || month < 1 || month > 12) return;
 
     const pdfPasswordGroup = document.getElementById('pdf-password-group');
@@ -540,8 +925,8 @@ function saveBankMonthState(provider, month) {
 
     const hasAny = hasData || (errorMessage && errorMessage.trim() !== '') || passwordRequired;
     if (!hasAny) {
-        if (bankMonthState[p]) {
-            delete bankMonthState[p][month];
+        if (bankMonthState?.[p]?.[y]) {
+            delete bankMonthState[p][y][month];
         }
         return;
     }
@@ -549,16 +934,21 @@ function saveBankMonthState(provider, month) {
     if (!bankMonthState[p]) {
         bankMonthState[p] = {};
     }
-    bankMonthState[p][month] = {
+    if (!bankMonthState[p][y]) {
+        bankMonthState[p][y] = {};
+    }
+    bankMonthState[p][y][month] = {
         rows: hasData ? rows : [],
         errorMessage: hasData ? '' : errorMessage,
         passwordRequired
     };
 }
 
-function restoreBankMonthState(provider, month) {
+function restoreBankMonthState(provider, year, month) {
     const p = String(provider || '').trim().toUpperCase();
+    const y = Number(year);
     if (!p) return;
+    if (!y || y < 1900 || y > 2100) return;
     if (!month || month < 1 || month > 12) return;
 
     const selectedFileDiv = document.getElementById('selected-file');
@@ -570,7 +960,7 @@ function restoreBankMonthState(provider, month) {
     // 파일 객체는 복원 불가하므로 항상 null로 리셋
     selectedUploadFile = null;
 
-    const state = bankMonthState?.[p]?.[month];
+    const state = bankMonthState?.[p]?.[y]?.[month];
     if (!state) {
         previewRows = [];
         renderPreviewTable([]);
@@ -587,7 +977,7 @@ function restoreBankMonthState(provider, month) {
         updatePreviewProviderInfo();
 
         // 확정 데이터가 있으면 DB에서 로드 (async)
-        loadConfirmedMonthIfAny(p, month);
+        loadConfirmedMonthForYear(p, y, month);
         return;
     }
 
@@ -619,7 +1009,7 @@ function restoreBankMonthState(provider, month) {
     updatePreviewProviderInfo();
 
     // 확정 데이터가 있으면 DB에서 로드 (async)
-    loadConfirmedMonthIfAny(p, month);
+    loadConfirmedMonthForYear(p, y, month);
 }
 
 function getProviderLabel(provider) {
@@ -653,25 +1043,109 @@ function initBankTabs() {
             if (p === String(currentProvider || '').trim().toUpperCase()) return;
 
             // 현재 은행/월 상태 저장 후 이동
-            saveBankMonthState(currentProvider, currentMonth);
+            saveBankMonthState(currentProvider, currentYear, currentMonth);
 
             currentProvider = p;
             tabs.forEach(t => t.classList.toggle('active', t === btn));
 
             // 선택된 은행/월 상태 복원 (없으면 초기화)
-            restoreBankMonthState(currentProvider, currentMonth);
+            restoreBankMonthState(currentProvider, currentYear, currentMonth);
         });
     });
 }
 
+function syncPreviewYearTabs() {
+    const container = document.getElementById('preview-year-tabs');
+    if (!container) return;
+
+    const nowY = new Date().getFullYear();
+    const minY = nowY - 5;
+    const maxY = nowY;
+    const y = Number(currentYear);
+
+    container.innerHTML = '';
+    for (let year = minY; year <= maxY; year++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'year-tab';
+        btn.textContent = String(year);
+        btn.dataset.year = String(year);
+        btn.classList.toggle('active', year === y);
+        btn.addEventListener('click', () => {
+            const nextY = Number(btn.dataset.year);
+            if (!Number.isFinite(nextY) || nextY < 1900 || nextY > 2100) return;
+            if (nextY === currentYear) return;
+            saveBankMonthState(currentProvider, currentYear, currentMonth);
+            currentYear = nextY;
+            syncPreviewYearTabs();
+            updatePreviewProviderInfo();
+            restoreBankMonthState(currentProvider, currentYear, currentMonth);
+        });
+        container.appendChild(btn);
+    }
+}
+
 function initSidebarMenu() {
     const menuItems = document.querySelectorAll('.menu-item');
+    const subItems = document.querySelectorAll('.sub-menu-item');
 
+    if (subItems.length > 0) {
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                // 상위 메뉴는 펼침/접힘만 담당
+                if (e.target && e.target.closest('.sub-menu-item')) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                const hasSub = !!item.querySelector('.sub-menu');
+                if (!hasSub) return;
+                menuItems.forEach(mi => {
+                    if (mi !== item) mi.classList.remove('active');
+                });
+                item.classList.toggle('active');
+            });
+        });
+
+        subItems.forEach(sub => {
+            sub.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetMenu = sub.dataset.menu;
+                if (!targetMenu) return;
+
+                // 하위 메뉴 active 처리
+                subItems.forEach(si => si.classList.remove('active'));
+                sub.classList.add('active');
+
+                // 상위 메뉴는 열어두기
+                const parentMenu = sub.closest('.menu-item');
+                if (parentMenu) {
+                    menuItems.forEach(mi => {
+                        if (mi !== parentMenu) mi.classList.remove('active');
+                    });
+                    parentMenu.classList.add('active');
+                }
+
+                showContentPanel(targetMenu);
+            });
+        });
+
+        // 초기 상태: active sub-menu-item 기준으로 패널 표시
+        const activeSub = document.querySelector('.sub-menu-item.active');
+        if (activeSub && activeSub.dataset.menu) {
+            showContentPanel(activeSub.dataset.menu);
+        }
+        return;
+    }
+
+    // 하위 메뉴가 없는(구버전) 구조 fallback
     menuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             const targetMenu = item.dataset.menu;
+            if (!targetMenu) return;
             menuItems.forEach(mi => mi.classList.remove('active'));
             item.classList.add('active');
             showContentPanel(targetMenu);
@@ -696,7 +1170,7 @@ function initMonthTabs() {
 
 function selectMonth(month) {
     // 현재 은행/월 상태 저장 후 이동
-    saveBankMonthState(currentProvider, currentMonth);
+    saveBankMonthState(currentProvider, currentYear, currentMonth);
 
     currentMonth = month;
     document.querySelectorAll('.month-tab').forEach(tab => {
@@ -704,7 +1178,7 @@ function selectMonth(month) {
     });
 
     // 선택된 은행/월 상태 복원 (없으면 초기화)
-    restoreBankMonthState(currentProvider, month);
+    restoreBankMonthState(currentProvider, currentYear, month);
 }
 
 function showContentPanel(panelId) {
@@ -715,6 +1189,10 @@ function showContentPanel(panelId) {
             panel.classList.add('active');
         }
     });
+
+    if (panelId === 'fixed-expense') {
+        loadFixedExpenses();
+    }
 }
 
 async function refreshAuthUI() {
@@ -732,6 +1210,7 @@ async function refreshAuthUI() {
             userEl.style.display = '';
             openBtn.style.display = '';
             logoutBtn.style.display = 'none';
+            syncUnconfirmButtonVisibility();
             return;
         }
 
@@ -740,13 +1219,83 @@ async function refreshAuthUI() {
         userEl.style.display = '';
         openBtn.style.display = 'none';
         logoutBtn.style.display = '';
+        syncUnconfirmButtonVisibility();
     } catch {
         isLoggedIn = false;
         userEl.textContent = '로그인 필요';
         userEl.style.display = '';
         openBtn.style.display = '';
         logoutBtn.style.display = 'none';
+        syncUnconfirmButtonVisibility();
     }
+}
+
+function ensureUnconfirmButton() {
+    const infoEl = document.getElementById('preview-provider-info');
+    if (!infoEl) return null;
+    let btn = document.getElementById('unconfirm-btn');
+    if (btn) return btn;
+
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'unconfirm-btn';
+    btn.className = 'unconfirm-btn';
+    btn.textContent = '확정 취소';
+    btn.addEventListener('click', async () => {
+        if (!isLoggedIn) return;
+        if (!isCurrentMonthConfirmed) return;
+        if (!confirm('정말 확정 취소하시겠습니까?\n해당 월 데이터가 DB에서 삭제됩니다.')) return;
+
+        const provider = String(currentProvider || '').trim().toUpperCase();
+        const year = Number(currentYear);
+        const month = Number(currentMonth);
+        if (!provider || !Number.isFinite(year) || !Number.isFinite(month)) return;
+
+        btn.disabled = true;
+        const previewSection = document.getElementById('preview-data-area') || document.querySelector('#preview-content .form-section');
+        showMessage(previewSection, '확정 취소(삭제) 중...', 'loading');
+
+        try {
+            const res = await apiFetch('/api/import/unconfirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, year, month })
+            });
+            const data = await res.json();
+            if (!res.ok || !data?.success) {
+                throw new Error(data?.error || '확정 취소에 실패했습니다.');
+            }
+
+            // 현재 월 상태 초기화 + 잠금 해제
+            const p = String(currentProvider || '').trim().toUpperCase();
+            if (bankMonthState?.[p]?.[currentYear]) {
+                delete bankMonthState[p][currentYear][currentMonth];
+            }
+            previewRows = [];
+            renderPreviewTable([]);
+            setPreviewDataVisible(false);
+            setConfirmedLock(false);
+
+            showMessage(previewSection, `확정 취소 완료 (삭제 ${data.deleted || 0}건)`, 'success');
+
+            // 상태 재조회
+            await loadConfirmedMonthForYear(provider, year, month);
+        } catch (e) {
+            showMessage(previewSection, e?.message || '확정 취소에 실패했습니다.', 'error');
+        } finally {
+            btn.disabled = false;
+            syncUnconfirmButtonVisibility();
+        }
+    });
+
+    infoEl.appendChild(btn);
+    return btn;
+}
+
+function syncUnconfirmButtonVisibility() {
+    const btn = ensureUnconfirmButton();
+    if (!btn) return;
+    btn.style.display = (isLoggedIn && !!isCurrentMonthConfirmed) ? 'inline-block' : 'none';
 }
 
 function requireLoginForUpload(elementForMessage) {
@@ -794,7 +1343,7 @@ async function doAuthLogin() {
     const username = usernameEl ? String(usernameEl.value || '').trim() : '';
     const password = passwordEl ? String(passwordEl.value || '') : '';
     if (!username) {
-        alert('아이디를 입력해주세요.');
+        alert('이름을 입력해주세요.');
         return;
     }
     if (!password) {
@@ -818,7 +1367,8 @@ async function doAuthLogin() {
     closeAuthModal();
     // 로그인 성공 시 대시보드와 확정 상태 자동 로드
     await loadDashboard();
-    await loadConfirmedMonthIfAny(currentProvider, currentMonth);
+    await loadConfirmedMonthForYear(currentProvider, currentYear, currentMonth);
+    await loadFixedExpenses();
 }
 
 async function doAuthSignup() {
@@ -827,7 +1377,7 @@ async function doAuthSignup() {
     const username = usernameEl ? String(usernameEl.value || '').trim() : '';
     const password = passwordEl ? String(passwordEl.value || '') : '';
     if (!username) {
-        alert('아이디를 입력해주세요.');
+        alert('이름을 입력해주세요.');
         return;
     }
     if (!password) {
@@ -849,9 +1399,9 @@ async function doAuthSignup() {
 
     await refreshAuthUI();
     closeAuthModal();
-    // 회원가입 성공 시 대시보드와 확정 상태 자동 로드
     await loadDashboard();
-    await loadConfirmedMonthIfAny(currentProvider, currentMonth);
+    await loadConfirmedMonthForYear(currentProvider, currentYear, currentMonth);
+    await loadFixedExpenses();
 }
 
 async function doAuthLogout() {
@@ -884,13 +1434,6 @@ async function initAuth() {
     if (closeBtn) {
         closeBtn.addEventListener('click', () => closeAuthModal());
     }
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeAuthModal();
-            }
-        });
-    }
     if (tabLogin) {
         tabLogin.addEventListener('click', () => setAuthTab('login'));
     }
@@ -904,23 +1447,16 @@ async function initAuth() {
         signupBtn.addEventListener('click', () => doAuthSignup());
     }
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const m = document.getElementById('auth-modal');
-            if (m && m.style.display !== 'none') {
-                closeAuthModal();
-            }
-        }
-    });
-
     await refreshAuthUI();
 }
 
 async function initApp() {
     initMonthTabs();
+    syncPreviewYearTabs();
     initBankTabs();
     initSidebarMenu();
     await initAuth();
+    initFixedExpenseUI();
     setupUploadStep();
     setupPreviewStep();
     setupPreviewActions();
@@ -929,18 +1465,672 @@ async function initApp() {
 
     if (isLoggedIn) {
         loadDashboard();
-        loadConfirmedMonthIfAny(currentProvider, currentMonth);
+        loadConfirmedMonthForYear(currentProvider, currentYear, currentMonth);
     }
 
     // 초기 은행/월 상태에서도 파일/데이터 제거
     const p = String(currentProvider || '').trim().toUpperCase();
-    if (bankMonthState?.[p]) {
-        delete bankMonthState[p][currentMonth];
+    if (bankMonthState?.[p]?.[currentYear]) {
+        delete bankMonthState[p][currentYear][currentMonth];
     }
 }
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', initApp);
+
+function initFixedExpenseUI() {
+    const resetBtn = document.getElementById('fixed-expense-reset-btn');
+    const addBtn = document.getElementById('fixed-expense-add-btn');
+    const filterEl = document.getElementById('fixed-expense-filter');
+    const openBtn = document.getElementById('fixed-expense-open-btn');
+    const closeBtn = document.getElementById('fixed-expense-modal-close');
+    if (!resetBtn) return;
+
+    resetBtn.addEventListener('click', () => {
+        resetFixedExpenseForm();
+    });
+
+    if (addBtn) {
+        addBtn.addEventListener('click', async () => {
+            const payload = getFixedExpenseFormPayload();
+            if (!payload) return;
+            const done = setButtonLoading(addBtn, fixedExpenseEditingId ? '저장 중...' : '등록 중...');
+            try {
+                if (fixedExpenseEditingId) {
+                    payload.id = fixedExpenseEditingId;
+                    const res = await apiFetch('/api/fixed-expenses/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data?.success) {
+                        throw new Error(data?.error || '수정에 실패했습니다.');
+                    }
+                    showToast('수정 완료', 'success');
+                } else {
+                    const res = await apiFetch('/api/fixed-expenses', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data?.success) {
+                        throw new Error(data?.error || '등록에 실패했습니다.');
+                    }
+                    showToast('등록 완료', 'success');
+                }
+                resetFixedExpenseForm();
+                await loadFixedExpenses();
+                await loadFixedExpenseAutoSetting();
+                closeFixedExpenseModal();
+            } catch (err) {
+                if (String(err?.message || '') === 'UNAUTHORIZED') return;
+                const msg = err?.message || '요청에 실패했습니다.';
+                showToast(msg, 'error');
+                alert(msg);
+            } finally {
+                done();
+            }
+        });
+    }
+
+    if (filterEl) {
+        filterEl.addEventListener('change', () => {
+            loadFixedExpenses();
+        });
+    }
+
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            resetFixedExpenseForm();
+            openFixedExpenseModal('add');
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => closeFixedExpenseModal());
+    }
+
+    setupFixedExpenseSortHeaders();
+
+    loadFixedExpenses();
+    loadFixedExpenseAutoSetting();
+}
+
+async function loadFixedExpenseAutoSetting() {
+    const enabledEl = document.getElementById('fixed-expense-auto-enabled');
+    const viewBtn = document.getElementById('fixed-expense-auto-view-btn');
+    const genBtn = document.getElementById('fixed-expense-auto-generate-btn');
+    const confirmBtn = document.getElementById('fixed-expense-auto-confirm-btn');
+    const unconfirmBtn = document.getElementById('fixed-expense-auto-unconfirm-btn');
+    const yearSel = document.getElementById('fixed-expense-auto-year');
+    const monthSel = document.getElementById('fixed-expense-auto-month');
+    const selectedSummaryEl = null;
+
+    if (!enabledEl || !viewBtn || !genBtn || !confirmBtn || !unconfirmBtn || !yearSel || !monthSel) {
+        return;
+    }
+
+    initFixedExpenseAutoMonthSelectors(yearSel, monthSel);
+
+    const refreshSelectedMonth = async () => {
+        const y = parseInt(yearSel.value, 10);
+        const m = parseInt(monthSel.value, 10);
+        if (!isFinite(y) || !isFinite(m)) return;
+        await loadFixedExpenseAutoMonthTransactions(y, m, selectedSummaryEl);
+    };
+
+    setupFixedExpenseAutoModal();
+    viewBtn.onclick = async () => {
+        const y = parseInt(yearSel.value, 10);
+        const m = parseInt(monthSel.value, 10);
+        if (!isFinite(y) || !isFinite(m)) return;
+        openFixedExpenseAutoModal(y, m);
+        await loadFixedExpenseAutoMonthTransactions(y, m, selectedSummaryEl);
+    };
+
+    try {
+        const res = await apiFetch('/api/fixed-expenses/auto/setting');
+        const data = await res.json();
+        if (!res.ok || !data?.success) {
+            throw new Error(data?.error || '설정을 불러오지 못했습니다.');
+        }
+
+        enabledEl.checked = Boolean(data.enabled);
+
+        await refreshSelectedMonth();
+
+        if (!yearSel.dataset.bound) {
+            yearSel.dataset.bound = '1';
+            yearSel.addEventListener('change', () => {
+                refreshSelectedMonth();
+            });
+        }
+        if (!monthSel.dataset.bound) {
+            monthSel.dataset.bound = '1';
+            monthSel.addEventListener('change', () => {
+                refreshSelectedMonth();
+            });
+        }
+
+        enabledEl.onchange = async () => {
+            try {
+                const r = await apiFetch('/api/fixed-expenses/auto/setting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabledEl.checked })
+                });
+                const d = await r.json();
+                if (!r.ok || !d?.success) {
+                    throw new Error(d?.error || '설정 저장에 실패했습니다.');
+                }
+                enabledEl.checked = Boolean(d.enabled);
+                showToast('저장 완료', 'success');
+            } catch (err) {
+                if (String(err?.message || '') === 'UNAUTHORIZED') return;
+                const msg = err?.message || '설정 저장에 실패했습니다.';
+                showToast(msg, 'error');
+                alert(msg);
+                enabledEl.checked = !enabledEl.checked;
+            }
+        };
+
+        genBtn.onclick = async () => {
+            const done = setButtonLoading(genBtn, '생성 중...');
+            try {
+                const y = parseInt(yearSel.value, 10);
+                const m = parseInt(monthSel.value, 10);
+                const r = await apiFetch(`/api/fixed-expenses/auto/generate?year=${encodeURIComponent(y)}&month=${encodeURIComponent(m)}`, { method: 'POST' });
+                const d = await r.json();
+                if (!r.ok || !d?.success) {
+                    throw new Error(d?.error || '생성에 실패했습니다.');
+                }
+                const created = Number(d?.createdCount ?? 0);
+                const skipped = Number(d?.skippedCount ?? 0);
+                if (created === 0 && skipped > 0) {
+                    showToast('이미 이번달 고정지출 내역이 생성되어 있습니다.', 'success');
+                } else {
+                    showToast(d?.message || `${created}건 생성 완료`, 'success');
+                }
+                await loadFixedExpenseAutoSetting();
+            } catch (err) {
+                if (String(err?.message || '') === 'UNAUTHORIZED') return;
+                const msg = err?.message || '생성에 실패했습니다.';
+                showToast(msg, 'error');
+                alert(msg);
+            } finally {
+                done();
+            }
+        };
+
+        confirmBtn.onclick = async () => {
+            const done = setButtonLoading(confirmBtn, '확정 중...');
+            try {
+                const y = parseInt(yearSel.value, 10);
+                const m = parseInt(monthSel.value, 10);
+                const r = await apiFetch(`/api/fixed-expenses/auto/confirm?year=${encodeURIComponent(y)}&month=${encodeURIComponent(m)}`, { method: 'POST' });
+                const d = await r.json();
+                if (!r.ok || !d?.success) {
+                    throw new Error(d?.error || '확정에 실패했습니다.');
+                }
+                const confirmed = Number(d?.confirmedCount ?? 0);
+                showToast(d?.message || (confirmed === 0 ? '확정할 내역이 없습니다.' : `${confirmed}건 확정 완료`), 'success');
+                await loadFixedExpenseAutoSetting();
+                await loadDashboard();
+                await loadFixedExpenses();
+            } catch (err) {
+                if (String(err?.message || '') === 'UNAUTHORIZED') return;
+                const msg = err?.message || '확정에 실패했습니다.';
+                showToast(msg, 'error');
+                alert(msg);
+            } finally {
+                done();
+            }
+        };
+
+        unconfirmBtn.onclick = async () => {
+            const done = setButtonLoading(unconfirmBtn, '취소 중...');
+            try {
+                const y = parseInt(yearSel.value, 10);
+                const m = parseInt(monthSel.value, 10);
+                const r = await apiFetch(`/api/fixed-expenses/auto/unconfirm?year=${encodeURIComponent(y)}&month=${encodeURIComponent(m)}`, { method: 'POST' });
+                const d = await r.json();
+                if (!r.ok || !d?.success) {
+                    throw new Error(d?.error || '확정 취소에 실패했습니다.');
+                }
+                showToast(d?.message || '확정 취소 완료', 'success');
+                await loadFixedExpenseAutoSetting();
+                await loadDashboard();
+                await loadFixedExpenses();
+            } catch (err) {
+                if (String(err?.message || '') === 'UNAUTHORIZED') return;
+                const msg = err?.message || '확정 취소에 실패했습니다.';
+                showToast(msg, 'error');
+                alert(msg);
+            } finally {
+                done();
+            }
+        };
+    } catch (err) {
+        if (String(err?.message || '') === 'UNAUTHORIZED') return;
+        showToast(err?.message || '설정을 불러오지 못했습니다.', 'error');
+    }
+}
+
+function setupFixedExpenseAutoModal() {
+    const modal = document.getElementById('fixed-expense-auto-modal');
+    const closeBtn = document.getElementById('fixed-expense-auto-modal-close');
+    if (!modal || modal.dataset.bound) return;
+    modal.dataset.bound = '1';
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+function openFixedExpenseAutoModal(year, month) {
+    const modal = document.getElementById('fixed-expense-auto-modal');
+    const titleEl = document.getElementById('fixed-expense-auto-modal-title');
+    if (!modal) return;
+    if (titleEl) titleEl.textContent = `${year}년 ${month}월 고정지출 생성 내역`;
+    modal.style.display = '';
+}
+
+function setupPanelTabs(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const tabs = container.querySelectorAll('.panel-tab');
+    if (!tabs.length) return;
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const key = tab.getAttribute('data-tab');
+            if (!key) return;
+            tabs.forEach(t => t.classList.toggle('active', t === tab));
+            const panels = document.querySelectorAll('.panel-tab-content');
+            panels.forEach(panel => {
+                panel.classList.toggle('active', panel.getAttribute('data-tab-panel') === key);
+            });
+        });
+    });
+}
+
+function setupFixedExpenseSortHeaders() {
+    const headers = document.querySelectorAll('#fixed-expense-table thead th.sortable');
+    if (!headers.length) return;
+    headers.forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.getAttribute('data-sort-key');
+            if (!key) return;
+            if (key === fixedExpenseSortKey) {
+                fixedExpenseSortDir = fixedExpenseSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                fixedExpenseSortKey = key;
+                fixedExpenseSortDir = (key === 'amount' || key === 'billingDay') ? 'desc' : 'asc';
+            }
+            updateFixedExpenseSortIndicators();
+            renderFixedExpenseTable(fixedExpenseItems);
+        });
+    });
+    updateFixedExpenseSortIndicators();
+}
+
+function updateFixedExpenseSortIndicators() {
+    const headers = document.querySelectorAll('#fixed-expense-table thead th.sortable');
+    headers.forEach(th => {
+        const key = th.getAttribute('data-sort-key');
+        if (key === fixedExpenseSortKey) {
+            th.setAttribute('data-sort-dir', fixedExpenseSortDir);
+        } else {
+            th.removeAttribute('data-sort-dir');
+        }
+    });
+}
+
+function getFixedExpenseFormPayload() {
+    const titleEl = document.getElementById('fixed-expense-title');
+    const accountEl = document.getElementById('fixed-expense-account');
+    const amountEl = document.getElementById('fixed-expense-amount');
+    const categoryEl = document.getElementById('fixed-expense-category');
+    const dayEl = document.getElementById('fixed-expense-day');
+    const memoEl = document.getElementById('fixed-expense-memo');
+
+    const title = titleEl ? titleEl.value.trim() : '';
+    const account = accountEl ? accountEl.value.trim() : '';
+    const amount = amountEl ? Number(amountEl.value) : NaN;
+    const billingDay = dayEl ? Number(dayEl.value) : NaN;
+    const category = categoryEl ? categoryEl.value.trim() : '';
+    const memo = memoEl ? memoEl.value.trim() : '';
+
+    if (!title) {
+        alert('항목명을 입력해주세요.');
+        return null;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+        alert('금액을 입력해주세요.');
+        return null;
+    }
+    if (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 31) {
+        alert('결제일을 선택해주세요.');
+        return null;
+    }
+
+    return {
+        title,
+        account: account || null,
+        amount,
+        category: category || null,
+        billingDay,
+        memo: memo || null,
+        status: 'ACTIVE'
+    };
+}
+
+function resetFixedExpenseForm() {
+    const titleEl = document.getElementById('fixed-expense-title');
+    const accountEl = document.getElementById('fixed-expense-account');
+    const amountEl = document.getElementById('fixed-expense-amount');
+    const categoryEl = document.getElementById('fixed-expense-category');
+    const dayEl = document.getElementById('fixed-expense-day');
+    const memoEl = document.getElementById('fixed-expense-memo');
+    const addBtn = document.getElementById('fixed-expense-add-btn');
+
+    if (titleEl) titleEl.value = '';
+    if (accountEl) accountEl.value = '';
+    if (amountEl) amountEl.value = '';
+    if (categoryEl) categoryEl.value = '';
+    if (dayEl) dayEl.value = '';
+    if (memoEl) memoEl.value = '';
+
+    fixedExpenseEditingId = null;
+    if (addBtn) addBtn.textContent = '추가';
+    setFixedExpenseModalTitle('add');
+}
+
+function openFixedExpenseModal(mode) {
+    const modal = document.getElementById('fixed-expense-modal');
+    if (!modal) return;
+    modal.style.display = '';
+    setFixedExpenseModalTitle(mode || 'add');
+}
+
+function closeFixedExpenseModal() {
+    const modal = document.getElementById('fixed-expense-modal');
+    if (!modal) return;
+    modal.style.display = 'none';
+}
+
+function setFixedExpenseModalTitle(mode) {
+    const titleEl = document.getElementById('fixed-expense-modal-title');
+    if (!titleEl) return;
+    titleEl.textContent = mode === 'edit' ? '고정 지출 수정' : '고정 지출 등록';
+}
+
+async function loadFixedExpenses() {
+    const filterEl = document.getElementById('fixed-expense-filter');
+    const status = filterEl ? String(filterEl.value || 'ALL') : 'ALL';
+    try {
+        const res = await apiFetch(`/api/fixed-expenses?status=${encodeURIComponent(status)}`);
+        const data = await res.json();
+        if (!res.ok || !data?.success) {
+            throw new Error(data?.error || '목록을 불러오지 못했습니다.');
+        }
+        fixedExpenseItems = Array.isArray(data.items) ? data.items : [];
+        renderFixedExpenseTable(fixedExpenseItems);
+    } catch (err) {
+        if (String(err?.message || '') === 'UNAUTHORIZED') return;
+        alert(err?.message || '목록을 불러오지 못했습니다.');
+    }
+}
+
+function renderFixedExpenseSummary(items) {
+    const totalEl = document.getElementById('fixed-expense-summary-total');
+    const activeEl = document.getElementById('fixed-expense-summary-active');
+    const nextEl = document.getElementById('fixed-expense-summary-next');
+    if (!totalEl && !activeEl && !nextEl) return;
+
+    const list = Array.isArray(items) ? items : [];
+    const activeItems = list.filter(it => String(it?.status || 'ACTIVE') !== 'PAUSED');
+
+    const totalAmount = activeItems.reduce((sum, it) => {
+        const v = typeof it?.amount === 'number' ? it.amount : Number(it?.amount);
+        return sum + (Number.isFinite(v) ? v : 0);
+    }, 0);
+
+    if (totalEl) totalEl.textContent = `${totalAmount.toLocaleString()}원`;
+    if (activeEl) activeEl.textContent = `${activeItems.length}건`;
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    let bestDiff = null;
+    let bestDay = null;
+    let bestCount = 0;
+
+    const calcDiff = (billingDay) => {
+        const day = Number(billingDay);
+        if (!Number.isFinite(day) || day <= 0) return null;
+
+        const daysInThisMonth = new Date(year, month + 1, 0).getDate();
+        const safeDayThisMonth = Math.min(day, daysInThisMonth);
+        let due = new Date(year, month, safeDayThisMonth);
+
+        if (due < new Date(year, month, today.getDate())) {
+            const nextMonthDays = new Date(year, month + 2, 0).getDate();
+            const safeDayNext = Math.min(day, nextMonthDays);
+            due = new Date(year, month + 1, safeDayNext);
+        }
+
+        const start = new Date(year, month, today.getDate());
+        const diffMs = due.getTime() - start.getTime();
+        return Math.round(diffMs / (1000 * 60 * 60 * 24));
+    };
+
+    activeItems.forEach(it => {
+        const diff = calcDiff(it?.billingDay);
+        if (diff === null) return;
+
+        if (bestDiff === null || diff < bestDiff) {
+            bestDiff = diff;
+            bestDay = Number(it?.billingDay);
+            bestCount = 1;
+            return;
+        }
+
+        if (diff === bestDiff && Number(it?.billingDay) === bestDay) {
+            bestCount += 1;
+        }
+    });
+
+    if (nextEl) {
+        if (bestDiff === null) {
+            nextEl.textContent = '-';
+        } else if (bestDiff === 0) {
+            nextEl.textContent = `오늘(${bestDay}일) ${bestCount}건`;
+        } else {
+            nextEl.textContent = `${bestDiff}일 뒤(${bestDay}일) ${bestCount}건`;
+        }
+    }
+}
+
+function renderFixedExpenseTable(items) {
+    const tbody = document.querySelector('#fixed-expense-table tbody');
+    const countEl = document.getElementById('fixed-expense-count');
+    if (!tbody) return;
+
+    renderFixedExpenseSummary(items);
+
+    const list = Array.isArray(items) ? [...items] : [];
+    list.sort((a, b) => {
+        const dir = fixedExpenseSortDir === 'desc' ? -1 : 1;
+        if (fixedExpenseSortKey === 'account') {
+            const as = String(a?.account ?? '').trim();
+            const bs = String(b?.account ?? '').trim();
+            return as.localeCompare(bs, 'ko') * dir;
+        }
+        if (fixedExpenseSortKey === 'amount') {
+            const av = typeof a?.amount === 'number' ? a.amount : -Infinity;
+            const bv = typeof b?.amount === 'number' ? b.amount : -Infinity;
+            return (av - bv) * dir;
+        }
+        if (fixedExpenseSortKey === 'billingDay') {
+            const av = Number(a?.billingDay ?? -1);
+            const bv = Number(b?.billingDay ?? -1);
+            return (av - bv) * dir;
+        }
+        if (fixedExpenseSortKey === 'status') {
+            const as = String(a?.status ?? '').trim();
+            const bs = String(b?.status ?? '').trim();
+            return as.localeCompare(bs, 'ko') * dir;
+        }
+        if (fixedExpenseSortKey === 'memo') {
+            const as = String(a?.memo ?? '').trim();
+            const bs = String(b?.memo ?? '').trim();
+            return as.localeCompare(bs, 'ko') * dir;
+        }
+        if (fixedExpenseSortKey === 'category') {
+            const as = String(a?.category ?? '').trim();
+            const bs = String(b?.category ?? '').trim();
+            return as.localeCompare(bs, 'ko') * dir;
+        }
+        const as = String(a?.title ?? '').trim();
+        const bs = String(b?.title ?? '').trim();
+        return as.localeCompare(bs, 'ko') * dir;
+    });
+    if (countEl) countEl.textContent = String(list.length);
+
+    if (!list.length) {
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="8">등록된 고정 지출이 없습니다.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = list.map(item => {
+        const amountText = (typeof item.amount === 'number') ? item.amount.toLocaleString() : '';
+        const isActive = item.status !== 'PAUSED';
+        const statusText = isActive ? '활성' : '중지';
+        const accountText = String(item.account ?? '');
+        const disabledAttr = fixedExpenseMonthLocked ? 'disabled' : '';
+        const disabledTitle = fixedExpenseMonthLocked ? 'title="선택한 월이 확정되어 수정/삭제할 수 없습니다. 확정 취소 후 변경하세요."' : '';
+        return `
+            <tr data-id="${item.id}">
+                <td>${item.title ?? ''}</td>
+                <td title="${accountText}">${item.account ?? '-'}</td>
+                <td>${item.category ?? '-'}</td>
+                <td>${item.billingDay ?? ''}일</td>
+                <td>${amountText}</td>
+                <td class="memo-col" title="${String(item.memo ?? '')}">${item.memo ?? '-'}</td>
+                <td>
+                    <span class="status-switch" title="${statusText}">
+                        <label class="switch">
+                            <input type="checkbox" class="fixed-expense-status-toggle" data-id="${item.id}" ${isActive ? 'checked' : ''} ${disabledAttr}>
+                            <span class="slider"></span>
+                        </label>
+                    </span>
+                </td>
+                <td>
+                    <button class="edit-btn" data-action="edit" ${disabledAttr} ${disabledTitle}>수정</button>
+                    <button class="edit-btn" data-action="delete" ${disabledAttr} ${disabledTitle}>삭제</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.querySelectorAll('input.fixed-expense-status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async (e) => {
+            const el = e.currentTarget;
+            const id = Number(el.getAttribute('data-id'));
+            if (!id) return;
+            const prevChecked = !el.checked;
+            const nextStatus = el.checked ? 'ACTIVE' : 'PAUSED';
+            el.disabled = true;
+            try {
+                await updateFixedExpenseStatus(id, nextStatus);
+                showToast(nextStatus === 'ACTIVE' ? '활성으로 변경' : '중지로 변경', 'success');
+                await loadFixedExpenses();
+                await loadFixedExpenseAutoSetting();
+            } catch (err) {
+                el.checked = prevChecked;
+                const msg = err?.message || '상태 변경에 실패했습니다.';
+                showToast(msg, 'error');
+                alert(msg);
+            } finally {
+                el.disabled = fixedExpenseMonthLocked;
+            }
+        });
+    });
+
+    tbody.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const action = e.currentTarget.getAttribute('data-action');
+            const row = e.currentTarget.closest('tr');
+            const id = row ? Number(row.dataset.id) : null;
+            if (!id) return;
+            const item = fixedExpenseItems.find(entry => entry.id === id);
+            if (!item) return;
+
+            if (action === 'edit') {
+                fillFixedExpenseForm(item);
+                openFixedExpenseModal('edit');
+                return;
+            }
+
+            if (action === 'delete') {
+                if (!confirm('선택한 고정 지출을 삭제할까요?')) return;
+                const btn = e.currentTarget;
+                const done = setButtonLoading(btn, '삭제 중...');
+                try {
+                    const res = await apiFetch(`/api/fixed-expenses/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (!res.ok || !data?.success) {
+                        throw new Error(data?.error || '삭제에 실패했습니다.');
+                    }
+                    await loadFixedExpenses();
+                    await loadFixedExpenseAutoSetting();
+                    showToast('삭제 완료', 'success');
+                } catch (err) {
+                    if (String(err?.message || '') === 'UNAUTHORIZED') return;
+                    const msg = err?.message || '삭제에 실패했습니다.';
+                    showToast(msg, 'error');
+                    alert(msg);
+                } finally {
+                    done();
+                }
+            }
+        });
+    });
+}
+
+function fillFixedExpenseForm(item) {
+    const titleEl = document.getElementById('fixed-expense-title');
+    const accountEl = document.getElementById('fixed-expense-account');
+    const amountEl = document.getElementById('fixed-expense-amount');
+    const categoryEl = document.getElementById('fixed-expense-category');
+    const dayEl = document.getElementById('fixed-expense-day');
+    const memoEl = document.getElementById('fixed-expense-memo');
+    const addBtn = document.getElementById('fixed-expense-add-btn');
+
+    if (titleEl) titleEl.value = item.title ?? '';
+    if (accountEl) accountEl.value = item.account ?? '';
+    if (amountEl) amountEl.value = item.amount ?? '';
+    if (categoryEl) categoryEl.value = item.category ?? '';
+    if (dayEl) dayEl.value = item.billingDay ?? '';
+    if (memoEl) memoEl.value = item.memo ?? '';
+
+    fixedExpenseEditingId = item.id;
+    if (addBtn) addBtn.textContent = '수정';
+}
 
 function showMessage(element, message, type = 'info') {
     if (type === 'loading') {
@@ -1041,8 +2231,8 @@ function clearFileSelection() {
 
     // 현재 은행/월 상태에서도 파일/데이터 제거
     const p = String(currentProvider || '').trim().toUpperCase();
-    if (bankMonthState?.[p]) {
-        delete bankMonthState[p][currentMonth];
+    if (bankMonthState?.[p]?.[currentYear]) {
+        delete bankMonthState[p][currentYear][currentMonth];
     }
 }
 
@@ -1234,7 +2424,10 @@ function setupUploadStep() {
                     if (!bankMonthState[currentProvider]) {
                         bankMonthState[currentProvider] = {};
                     }
-                    bankMonthState[currentProvider][currentMonth] = {
+                    if (!bankMonthState[currentProvider][currentYear]) {
+                        bankMonthState[currentProvider][currentYear] = {};
+                    }
+                    bankMonthState[currentProvider][currentYear][currentMonth] = {
                         rows: [],
                         errorMessage: msg,
                         passwordRequired: true
@@ -1245,7 +2438,10 @@ function setupUploadStep() {
                 if (!bankMonthState[currentProvider]) {
                     bankMonthState[currentProvider] = {};
                 }
-                bankMonthState[currentProvider][currentMonth] = {
+                if (!bankMonthState[currentProvider][currentYear]) {
+                    bankMonthState[currentProvider][currentYear] = {};
+                }
+                bankMonthState[currentProvider][currentYear][currentMonth] = {
                     rows: [],
                     errorMessage: msg
                 };
@@ -1278,7 +2474,10 @@ function setupUploadStep() {
                 if (!bankMonthState[currentProvider]) {
                     bankMonthState[currentProvider] = {};
                 }
-                bankMonthState[currentProvider][currentMonth] = {
+                if (!bankMonthState[currentProvider][currentYear]) {
+                    bankMonthState[currentProvider][currentYear] = {};
+                }
+                bankMonthState[currentProvider][currentYear][currentMonth] = {
                     rows: [],
                     errorMessage: errorMsg,
                     passwordRequired: true
@@ -1293,7 +2492,7 @@ function setupUploadStep() {
             setPreviewDataVisible(true);
             
             // 은행/월 상태 저장
-            saveBankMonthState(currentProvider, currentMonth);
+            saveBankMonthState(currentProvider, currentYear, currentMonth);
         } catch (err) {
             if (String(err?.message || '') === 'UNAUTHORIZED') {
                 showMessage(uploadSection, '로그인이 필요합니다.', 'error');
@@ -1406,7 +2605,35 @@ function renderPreviewTable(rows) {
         `;
     }).join('');
 
+    updatePreviewMeta(rows);
+
     renderPreviewPagination(totalPages);
+}
+
+function getPreviewRowStats(rows) {
+    const total = Array.isArray(rows) ? rows.length : 0;
+    if (!total) {
+        return { total: 0, valid: 0, error: 0 };
+    }
+    const valid = rows.filter(r => {
+        if (!r || (Array.isArray(r._errors) && r._errors.length > 0)) return false;
+        if (!r.date || !/^\d{4}-\d{2}-\d{2}$/.test(String(r.date))) return false;
+        if (!r.description || !String(r.description).trim()) return false;
+        return typeof r.amount === 'number' && !isNaN(r.amount);
+    }).length;
+    return { total, valid, error: total - valid };
+}
+
+function updatePreviewMeta(rows) {
+    const metaEl = document.getElementById('preview-meta');
+    const hintEl = document.getElementById('preview-hint');
+    if (!metaEl) return;
+
+    const stats = getPreviewRowStats(rows || previewRows || []);
+    metaEl.innerHTML = `총 <span class="count-strong">${stats.total}</span>건 · 정상 <span class="count-strong">${stats.valid}</span>건 · 오류 <span class="${stats.error > 0 ? 'count-error' : 'count-strong'}">${stats.error}</span>건`;
+    if (hintEl) {
+        hintEl.style.display = stats.total ? '' : 'none';
+    }
 }
 
 function renderPreviewPagination(totalPages) {
@@ -1573,17 +2800,19 @@ function setupPreviewActions() {
             if (ym) {
                 currentYear = ym.year;
                 currentMonth = ym.month;
+                syncPreviewYearTabs();
                 document.querySelectorAll('.month-tab').forEach(tab => {
                     tab.classList.toggle('active', parseInt(tab.dataset.month) === currentMonth);
                 });
             } else {
                 syncCurrentYearFromRows(previewRows);
+                syncPreviewYearTabs();
             }
 
             setConfirmedLock(true);
 
             // 저장 완료 후 DB 데이터로 다시 로드하고 잠금
-            await loadConfirmedMonthIfAny(provider, currentMonth);
+            await loadConfirmedMonthForYear(provider, currentYear, currentMonth);
         } catch (err) {
             if (String(err?.message || '') === 'UNAUTHORIZED') {
                 showMessage(previewSection, '로그인이 필요합니다.', 'error');
@@ -1657,13 +2886,21 @@ function saveEdit(index) {
     const date = document.getElementById('edit-date').value;
     const description = document.getElementById('edit-description').value.trim();
     const amount = parseFloat(document.getElementById('edit-amount').value) || null;
-    const category = document.getElementById('edit-category').value;
+    let category = document.getElementById('edit-category').value;
     
     // 유효성 검사
     const errors = [];
-    if (!date) errors.push('날짜 누락');
+    if (!date) {
+        errors.push('날짜 누락');
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        errors.push('날짜 형식 오류');
+    }
     if (!description) errors.push('내용 누락');
     if (amount === null || isNaN(amount)) errors.push('금액 오류');
+
+    if (!category || !String(category).trim()) {
+        category = '기타';
+    }
     
     // 데이터 업데이트
     previewRows[index] = {

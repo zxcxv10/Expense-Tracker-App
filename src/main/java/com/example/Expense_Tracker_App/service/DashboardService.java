@@ -1,6 +1,7 @@
 package com.example.Expense_Tracker_App.service;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.Expense_Tracker_App.dto.DashboardDailyResponse;
 import com.example.Expense_Tracker_App.dto.DashboardMonthlyResponse;
 import com.example.Expense_Tracker_App.entity.Transaction;
 import com.example.Expense_Tracker_App.repository.TransactionRepository;
@@ -153,5 +155,53 @@ public class DashboardService {
         res.put("incomeByCategory", incomeByCategory);
         res.put("expenseByCategory", expenseByCategory);
         return res;
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardDailyResponse getDaily(Integer year, Integer month, String provider, String username) {
+        if (year == null || month == null) {
+            throw new IllegalArgumentException("year, month는 필수입니다.");
+        }
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("month가 올바르지 않습니다.");
+        }
+
+        String u = username == null ? "" : username.trim();
+        if (u.isBlank()) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+
+        String p = provider == null ? "ALL" : provider.trim().toUpperCase();
+        boolean isAll = p.isBlank() || "ALL".equalsIgnoreCase(p);
+
+        List<Transaction> list = isAll
+                ? transactionRepository.findByTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(year, month, "Y", u)
+                : transactionRepository.findByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(p, year, month, "Y", u);
+
+        YearMonth ym = YearMonth.of(year, month);
+        int lastDay = ym.lengthOfMonth();
+        double[] income = new double[lastDay + 1];
+        double[] expense = new double[lastDay + 1];
+
+        for (Transaction t : list) {
+            if (t == null || t.getTxDate() == null) continue;
+            int d = t.getTxDate().getDayOfMonth();
+            if (d < 1 || d > lastDay) continue;
+
+            BigDecimal amt = t.getAmount();
+            if (amt == null) continue;
+            double v = amt.doubleValue();
+            if (v >= 0) {
+                income[d] += v;
+            } else {
+                expense[d] += Math.abs(v);
+            }
+        }
+
+        List<DashboardDailyResponse.DailyAmount> days = new ArrayList<>();
+        for (int d = 1; d <= lastDay; d++) {
+            days.add(new DashboardDailyResponse.DailyAmount(d, income[d], expense[d]));
+        }
+        return DashboardDailyResponse.ok(year, month, isAll ? "ALL" : p, days);
     }
 }

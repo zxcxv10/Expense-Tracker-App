@@ -158,4 +158,30 @@ public class TransactionService {
         }
         return transactionRepository.existsByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedBy(p, year, month, "Y", u);
     }
+
+    @Transactional
+    public long unconfirmMonth(String provider, Integer year, Integer month, String username) {
+        String p = provider == null ? "" : provider.trim().toUpperCase();
+        if (p.isBlank()) {
+            throw new IllegalArgumentException("은행/카드사를 선택해주세요.");
+        }
+        if (year == null || month == null) {
+            throw new IllegalArgumentException("취소할 년/월이 올바르지 않습니다.");
+        }
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("취소할 년/월이 올바르지 않습니다.");
+        }
+        String u = username == null ? "" : username.trim();
+        if (u.isBlank()) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+
+        return transactionRepository.deleteByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedBy(
+                p,
+                year,
+                month,
+                "Y",
+                u
+        );
+    }
 }

@@ -12,9 +12,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "transactions")
+@Table(
+        name = "transactions",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_tx_fixed_expense_month",
+                        columnNames = {"created_by", "fixed_expense_id", "gen_year", "gen_month"}
+                )
+        }
+)
 public class Transaction {
 
     @Id
@@ -62,6 +71,15 @@ public class Transaction {
 
     @Column(name = "confirmed_by", length = 50)
     private String confirmedBy;
+
+    @Column(name = "fixed_expense_id")
+    private Long fixedExpenseId;
+
+    @Column(name = "gen_year")
+    private Integer genYear;
+
+    @Column(name = "gen_month")
+    private Integer genMonth;
 
     public Transaction() {
     }
@@ -198,5 +216,29 @@ public class Transaction {
 
     public void setConfirmedBy(String confirmedBy) {
         this.confirmedBy = confirmedBy;
+    }
+
+    public Long getFixedExpenseId() {
+        return fixedExpenseId;
+    }
+
+    public void setFixedExpenseId(Long fixedExpenseId) {
+        this.fixedExpenseId = fixedExpenseId;
+    }
+
+    public Integer getGenYear() {
+        return genYear;
+    }
+
+    public void setGenYear(Integer genYear) {
+        this.genYear = genYear;
+    }
+
+    public Integer getGenMonth() {
+        return genMonth;
+    }
+
+    public void setGenMonth(Integer genMonth) {
+        this.genMonth = genMonth;
     }
 }

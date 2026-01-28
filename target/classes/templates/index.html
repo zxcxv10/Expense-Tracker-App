@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>가계부 - 거래내역 조회</title>
+    <title>지출 관리</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -13,15 +13,22 @@
             <!-- 사이드바 -->
             <nav class="sidebar">
                 <div class="sidebar-header">
-                    <h2>거래내역 조회</h2>
+                    <h2>지출 · 수입 관리</h2>
                 </div>
-                
+
                 <div class="menu-section">
-                    <div class="menu-item active" data-menu="preview">
-                        <span class="menu-title">데이터 관리</span>
+                    <div class="menu-item active">
+                        <span class="menu-title">지출관리</span>
+                        <div class="sub-menu">
+                            <div class="sub-menu-item active" data-menu="preview">내역 관리</div>
+                            <div class="sub-menu-item" data-menu="dashboard">대시보드</div>
+                        </div>
                     </div>
-                    <div class="menu-item" data-menu="dashboard">
-                        <span class="menu-title">대시보드</span>
+                    <div class="menu-item">
+                        <span class="menu-title">고정 지출 관리</span>
+                        <div class="sub-menu">
+                            <div class="sub-menu-item" data-menu="fixed-expense">고정 지출</div>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -41,6 +48,9 @@
                             <p class="panel-description" id="preview-provider-info"></p>
                         </div>
                         <div class="form-section">
+                            <div class="form-group">
+                                <div class="year-tabs" id="preview-year-tabs"></div>
+                            </div>
                             <!-- 월 탭 -->
                             <div class="month-tabs" id="month-tabs">
                                 <!-- JS로 1~12월 탭 생성 -->
@@ -79,6 +89,8 @@
 
                             <div id="preview-data-area" style="display: none;">
                                 <div class="preview-subtitle">이용 내역</div>
+                                <div class="preview-meta" id="preview-meta"></div>
+                                <div class="preview-hint" id="preview-hint">오류가 있는 행은 저장되지 않습니다.</div>
 
                                 <!-- 프리뷰 테이블 -->
                                 <div class="table-wrap">
@@ -112,6 +124,10 @@
                             <p class="panel-description">확정된 데이터(confirmed=Y) 기반 월별/은행별 분석</p>
                         </div>
                         <div class="form-section">
+                            <div class="dashboard-tabs" id="dashboard-tabs">
+                                <button type="button" class="dashboard-tab active" data-tab="analytics">분석</button>
+                                <button type="button" class="dashboard-tab" data-tab="calendar">달력</button>
+                            </div>
                             <div class="dashboard-controls">
                                 <label for="dashboard-year">년도</label>
                                 <select id="dashboard-year"></select>
@@ -123,6 +139,7 @@
                                     <option value="NH">농협</option>
                                     <option value="KB">국민</option>
                                     <option value="HYUNDAI">현대카드</option>
+                                    <option value="FIXED">고정지출</option>
                                 </select>
 
                                 <label for="dashboard-month">월(상세)</label>
@@ -131,62 +148,277 @@
                                 <button type="button" id="dashboard-load-btn">조회</button>
                             </div>
 
-                            <div class="dashboard-summary" id="dashboard-summary" style="display:none;">
-                                <div class="summary-card">
-                                    <div class="summary-label">총수입</div>
-                                    <div class="summary-value" id="dashboard-summary-income">0</div>
+                            <div class="dashboard-tab-content active" data-tab-panel="analytics">
+                                <div class="dashboard-summary" id="dashboard-summary" style="display:none;">
+                                    <div class="summary-card">
+                                        <div class="summary-label">총수입</div>
+                                        <div class="summary-value" id="dashboard-summary-income">0</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-label">총지출</div>
+                                        <div class="summary-value" id="dashboard-summary-expense">0</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-label">순이익</div>
+                                        <div class="summary-value" id="dashboard-summary-balance">0</div>
+                                    </div>
                                 </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">총지출</div>
-                                    <div class="summary-value" id="dashboard-summary-expense">0</div>
-                                </div>
-                                <div class="summary-card">
-                                    <div class="summary-label">순이익</div>
-                                    <div class="summary-value" id="dashboard-summary-balance">0</div>
-                                </div>
-                            </div>
 
-                            <div class="dashboard-charts" id="dashboard-charts" style="display:none;">
-                                <div class="dashboard-top-charts" id="dashboard-top-charts">
-                                    <div class="chart-card">
-                                        <h3 class="chart-title">월별 수입/지출 (연간)</h3>
-                                        <div class="line-chart-container">
-                                            <canvas id="chart-monthly-income-expense"></canvas>
+                                <div class="dashboard-charts" id="dashboard-charts" style="display:none;">
+                                    <div class="dashboard-top-charts" id="dashboard-top-charts">
+                                        <div class="chart-card">
+                                            <h3 class="chart-title">월별 수입/지출 (연간)</h3>
+                                            <div class="line-chart-container">
+                                                <canvas id="chart-monthly-income-expense"></canvas>
+                                            </div>
+                                        </div>
+
+                                        <div class="chart-card" id="chart-provider-expense-wrap" style="display:none;">
+                                            <h3 class="chart-title">은행별 월별 지출 (전체 선택 시)</h3>
+                                            <div class="line-chart-container">
+                                                <canvas id="chart-provider-monthly-expense"></canvas>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="chart-card" id="chart-provider-expense-wrap" style="display:none;">
-                                        <h3 class="chart-title">은행별 월별 지출 (전체 선택 시)</h3>
-                                        <div class="line-chart-container">
-                                            <canvas id="chart-provider-monthly-expense"></canvas>
+                                    <div class="chart-card" id="chart-category-wrap">
+                                        <h3 class="chart-title">카테고리별 수입/지출 (선택 월)</h3>
+                                        <div class="dashboard-controls" style="margin-bottom: 10px;">
+                                            <label for="dashboard-category-mode">표시</label>
+                                            <select id="dashboard-category-mode">
+                                                <option value="EXPENSE" selected>지출</option>
+                                                <option value="INCOME">수입</option>
+                                            </select>
+                                        </div>
+                                        <div class="donut-chart-container">
+                                            <canvas id="chart-category-income-expense"></canvas>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="chart-card" id="chart-category-wrap">
-                                    <h3 class="chart-title">카테고리별 수입/지출 (선택 월)</h3>
-                                    <div class="dashboard-controls" style="margin-bottom: 10px;">
-                                        <label for="dashboard-category-mode">표시</label>
-                                        <select id="dashboard-category-mode">
-                                            <option value="EXPENSE" selected>지출</option>
-                                            <option value="INCOME">수입</option>
-                                        </select>
-                                    </div>
-                                    <div class="donut-chart-container">
-                                        <canvas id="chart-category-income-expense"></canvas>
-                                    </div>
+                                <div class="analytics-placeholder" id="dashboard-placeholder">
+                                    <p>조회 버튼을 눌러 확정된 데이터를 불러오세요.</p>
                                 </div>
                             </div>
 
-                            <div class="analytics-placeholder" id="dashboard-placeholder">
-                                <p>조회 버튼을 눌러 확정된 데이터를 불러오세요.</p>
+                            <div class="dashboard-tab-content" data-tab-panel="calendar">
+                                <div class="calendar-panel">
+                                    <div class="calendar-header">
+                                        <button type="button" class="calendar-nav" id="calendar-prev">이전</button>
+                                        <div class="calendar-title" id="calendar-title">-</div>
+                                        <button type="button" class="calendar-nav" id="calendar-next">다음</button>
+                                    </div>
+                                    <div class="calendar-weekdays">
+                                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                                    </div>
+                                    <div class="calendar-grid" id="dashboard-calendar-grid"></div>
+                                    <div class="calendar-hint" id="calendar-hint" style="display:none;"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                 </div>
-             </main>
-         </div>
-     </div>
+
+                    <div class="content-panel" id="fixed-expense-content">
+                        <div class="panel-header">
+                            <div class="panel-title-row">
+                                <div>
+                                    <h1>고정 지출 관리</h1>
+                                    <p class="panel-description">매달 반복되는 고정 지출을 등록하고 관리합니다.</p>
+                                </div>
+                                
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <div class="form-section-header">
+                                <button type="button" class="execute-btn compact-btn" id="fixed-expense-open-btn">고정 지출 등록</button>
+                            </div>
+                            <div class="fixed-expense-grid">
+                                <div class="fixed-expense-card">
+                                    <div class="card-header-row">
+                                        <div>
+                                            <h3 class="card-title">등록된 고정 지출</h3>
+                                            <p class="card-subtitle">총 <span id="fixed-expense-count">0</span>건</p>
+                                        </div>
+                                        <div class="fixed-expense-header-actions">
+                                            <div class="fixed-expense-filter">
+                                                <label for="fixed-expense-filter">상태</label>
+                                                <select id="fixed-expense-filter">
+                                                    <option value="ALL">전체</option>
+                                                    <option value="ACTIVE">활성</option>
+                                                    <option value="PAUSED">중지</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="fixed-expense-summary">
+                                        <div class="fixed-expense-summary-card">
+                                            <div class="fixed-expense-summary-label">이번달 고정지출 합계</div>
+                                            <div class="fixed-expense-summary-value" id="fixed-expense-summary-total">-</div>
+                                        </div>
+                                        <div class="fixed-expense-summary-card">
+                                            <div class="fixed-expense-summary-label">활성 건수</div>
+                                            <div class="fixed-expense-summary-value" id="fixed-expense-summary-active">-</div>
+                                        </div>
+                                        <div class="fixed-expense-summary-card">
+                                            <div class="fixed-expense-summary-label">다음 결제</div>
+                                            <div class="fixed-expense-summary-value" id="fixed-expense-summary-next">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="fixed-expense-auto">
+                                        <div class="fixed-expense-auto-row">
+                                            <div class="fixed-expense-auto-title">자동 생성</div>
+                                            <label class="fixed-expense-auto-toggle">
+                                                <input type="checkbox" id="fixed-expense-auto-enabled" />
+                                                <span>매달 1일 자동 생성</span>
+                                                <span class="help-tip" data-tip="ON이면 매달 1일에 고정지출(활성) 기준으로 이번달 미확정 내역을 자동으로 생성합니다.">?</span>
+                                            </label>
+                                        </div>
+                                        <div class="fixed-expense-auto-row">
+                                            <div class="fixed-expense-auto-actions">
+                                                <span class="fixed-expense-auto-month">
+                                                    <label for="fixed-expense-auto-year">년도</label>
+                                                    <select id="fixed-expense-auto-year"></select>
+                                                    <label for="fixed-expense-auto-month">월</label>
+                                                    <select id="fixed-expense-auto-month"></select>
+                                                </span>
+                                            </div>
+                                            <div class="fixed-expense-auto-actions fixed-expense-auto-actions-right">
+                                                <span class="btn-with-tip">
+                                                    <button type="button" class="execute-btn outline compact-btn" id="fixed-expense-auto-view-btn">내역 보기</button>
+                                                    <span class="help-tip" data-tip="선택한 월에 생성된 고정지출(FIXED) 내역(미확정/확정)을 확인합니다.">?</span>
+                                                </span>
+                                                <span class="btn-with-tip">
+                                                    <button type="button" class="execute-btn outline compact-btn" id="fixed-expense-auto-generate-btn">이번달 생성</button>
+                                                    <span class="help-tip" data-tip="이번달 고정지출 내역을 transactions에 미확정(N)으로 생성합니다. 이미 생성된 건은 중복으로 추가되지 않습니다.">?</span>
+                                                </span>
+                                                <span class="btn-with-tip">
+                                                    <button type="button" class="execute-btn compact-btn" id="fixed-expense-auto-confirm-btn">이번달 확정</button>
+                                                    <span class="help-tip" data-tip="이번달에 생성된 고정지출 미확정 내역(N)을 확정(Y)으로 바꿉니다. 확정되면 대시보드/달력 집계에 포함됩니다.">?</span>
+                                                </span>
+                                                <span class="btn-with-tip">
+                                                    <button type="button" class="execute-btn outline compact-btn" id="fixed-expense-auto-unconfirm-btn">확정 취소</button>
+                                                    <span class="help-tip" data-tip="선택한 월의 고정지출 확정(Y)을 취소하여 미확정(N)으로 되돌립니다. 취소 후 고정지출 수정/삭제가 가능합니다.">?</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="table-wrap fixed-expense-table-wrap">
+                                        <table class="fixed-expense-table" id="fixed-expense-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="sortable" data-sort-key="title">항목</th>
+                                                    <th class="sortable" data-sort-key="account">통장/카드</th>
+                                                    <th class="sortable" data-sort-key="category">카테고리</th>
+                                                    <th class="sortable" data-sort-key="billingDay">결제일</th>
+                                                    <th class="sortable" data-sort-key="amount">금액</th>
+                                                    <th class="sortable memo-col" data-sort-key="memo">메모</th>
+                                                    <th class="sortable" data-sort-key="status">상태</th>
+                                                    <th>관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="empty-row">
+                                                    <td colspan="8">등록된 고정 지출이 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
+
+    <div class="modal-overlay" id="fixed-expense-auto-modal" style="display:none;">
+        <div class="modal fixed-expense-modal">
+            <div class="modal-header">
+                <h3 id="fixed-expense-auto-modal-title">고정지출 생성 내역</h3>
+                <button type="button" class="modal-close" id="fixed-expense-auto-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-wrap fixed-expense-auto-table-wrap">
+                    <table class="fixed-expense-table" id="fixed-expense-auto-table">
+                        <thead>
+                            <tr>
+                                <th>일자</th>
+                                <th>내용</th>
+                                <th>카테고리</th>
+                                <th>금액</th>
+                                <th>확정</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="empty-row">
+                                <td colspan="5">선택한 월의 고정지출 생성 내역이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="fixed-expense-modal" style="display:none;">
+        <div class="modal fixed-expense-modal">
+            <div class="modal-header">
+                <h3 id="fixed-expense-modal-title">고정 지출 등록</h3>
+                <button type="button" class="modal-close" id="fixed-expense-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label for="fixed-expense-title">항목명</label>
+                    <input type="text" id="fixed-expense-title" placeholder="예: 월세, 보험료" />
+                </div>
+                <div class="modal-field">
+                    <label for="fixed-expense-account">통장/카드</label>
+                    <input type="text" id="fixed-expense-account" placeholder="예: 국민, 신한, 우리" />
+                </div>
+                <div class="modal-field">
+                    <label for="fixed-expense-amount">금액</label>
+                    <input type="number" id="fixed-expense-amount" placeholder="숫자만 입력" />
+                </div>
+                <div class="modal-field">
+                    <label for="fixed-expense-category">카테고리</label>
+                    <select id="fixed-expense-category">
+                        <option value="">선택</option>
+                        <option value="주거">주거</option>
+                        <option value="보험">보험</option>
+                        <option value="교통">교통</option>
+                        <option value="통신">통신</option>
+                        <option value="교육">교육</option>
+                        <option value="구독">구독</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div class="modal-field">
+                    <label for="fixed-expense-day">결제일</label>
+                    <select id="fixed-expense-day">
+                        <option value="">선택</option>
+                        <option value="1">1일</option>
+                        <option value="5">5일</option>
+                        <option value="10">10일</option>
+                        <option value="15">15일</option>
+                        <option value="20">20일</option>
+                        <option value="25">25일</option>
+                        <option value="30">30일</option>
+                    </select>
+                </div>
+                <div class="modal-field">
+                    <label for="fixed-expense-memo">메모</label>
+                    <textarea id="fixed-expense-memo" rows="3" placeholder="추가 설명을 입력하세요"></textarea>
+                </div>
+                <div class="fixed-expense-actions">
+                    <button type="button" class="execute-btn" id="fixed-expense-add-btn">추가</button>
+                    <button type="button" class="execute-btn outline" id="fixed-expense-reset-btn">초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal-overlay" id="auth-modal" style="display:none;">
         <div class="modal">
@@ -203,7 +435,7 @@
             <div class="modal-body">
                 <div class="modal-panel" id="auth-panel-login">
                     <div class="modal-field">
-                        <label for="auth-login-username">아이디</label>
+                        <label for="auth-login-username">이름</label>
                         <input id="auth-login-username" type="text" maxlength="50" autocomplete="username" />
                     </div>
                     <div class="modal-field">
@@ -215,7 +447,7 @@
 
                 <div class="modal-panel" id="auth-panel-signup" style="display:none;">
                     <div class="modal-field">
-                        <label for="auth-signup-username">아이디</label>
+                        <label for="auth-signup-username">이름</label>
                         <input id="auth-signup-username" type="text" maxlength="50" autocomplete="username" />
                     </div>
                     <div class="modal-field">

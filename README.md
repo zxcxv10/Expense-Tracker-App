@@ -126,6 +126,68 @@ src/main/resources/
   application.properties
 ```
 
+## DB 스키마(테이블/컬럼)
+
+JPA Entity 기준으로 아래 테이블이 생성/관리됩니다.
+
+### `users`
+
+- `id` (PK)
+- `username`
+- `password`
+- `role`
+- `created_at`
+
+### `transactions`
+
+- `id` (PK)
+- `provider`
+- `tx_year`
+- `tx_month`
+- `tx_date`
+- `description`
+- `amount`
+- `category`
+- `created_at`
+- `updated_at`
+- `created_by`
+- `updated_by`
+- `confirmed`
+- `confirmed_at`
+- `confirmed_by`
+
+### `fixed_expenses`
+
+- `id` (PK)
+- `username`
+- `title`
+- `account`
+- `amount`
+- `category`
+- `billing_day`
+- `memo`
+- `status`
+- `created_at`
+- `updated_at`
+
+```sql
+CREATE TABLE fixed_expenses (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    account VARCHAR(50),
+    amount DECIMAL(12,2) NOT NULL,
+    category VARCHAR(50),
+    billing_day TINYINT NOT NULL,
+    memo VARCHAR(500),
+    status VARCHAR(10) DEFAULT 'ACTIVE',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_fixed_expenses_username ON fixed_expenses(username);
+```
+
 ## Troubleshooting
 
 - **PDF 비밀번호 입력창이 안 뜸**

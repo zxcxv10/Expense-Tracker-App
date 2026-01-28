@@ -33,6 +33,34 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             String createdBy
     );
 
+    List<Transaction> findByProviderAndTxYearAndTxMonthAndCreatedByOrderByTxDateAscIdAsc(
+            String provider,
+            Integer txYear,
+            Integer txMonth,
+            String createdBy
+    );
+
+    boolean existsByProviderAndFixedExpenseIdAndConfirmedAndCreatedBy(
+            String provider,
+            Long fixedExpenseId,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByProviderAndFixedExpenseIdAndConfirmedAndCreatedByOrderByTxYearAscTxMonthAscTxDateAscIdAsc(
+            String provider,
+            Long fixedExpenseId,
+            String confirmed,
+            String createdBy
+    );
+
+    boolean existsByCreatedByAndFixedExpenseIdAndGenYearAndGenMonth(
+            String createdBy,
+            Long fixedExpenseId,
+            Integer genYear,
+            Integer genMonth
+    );
+
     List<Transaction> findByTxYearAndTxMonthAndConfirmedOrderByTxDateAscIdAsc(
             Integer txYear,
             Integer txMonth,
@@ -55,6 +83,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByProviderAndTxYearAndConfirmedAndCreatedBy(
             String provider,
             Integer txYear,
+            String confirmed,
+            String createdBy
+    );
+
+    long deleteByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedBy(
+            String provider,
+            Integer txYear,
+            Integer txMonth,
             String confirmed,
             String createdBy
     );

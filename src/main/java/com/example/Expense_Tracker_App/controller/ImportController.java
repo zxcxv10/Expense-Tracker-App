@@ -17,6 +17,8 @@ import com.example.Expense_Tracker_App.dto.ImportConfirmRequest;
 import com.example.Expense_Tracker_App.dto.ImportConfirmResponse;
 import com.example.Expense_Tracker_App.dto.ImportPreviewResponse;
 import com.example.Expense_Tracker_App.dto.ImportPreviewRow;
+import com.example.Expense_Tracker_App.dto.ImportUnconfirmRequest;
+import com.example.Expense_Tracker_App.dto.ImportUnconfirmResponse;
 import com.example.Expense_Tracker_App.service.ImportPreviewService;
 import com.example.Expense_Tracker_App.service.TransactionService;
 
@@ -87,6 +89,27 @@ public class ImportController {
             return ResponseEntity.ok(ConfirmedTransactionsResponse.ok(confirmed, rows));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ConfirmedTransactionsResponse.fail(e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/unconfirm", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ImportUnconfirmResponse> unconfirm(@RequestBody ImportUnconfirmRequest request, HttpSession session) {
+        try {
+            if (request == null) {
+                return ResponseEntity.badRequest().body(ImportUnconfirmResponse.fail("요청 데이터가 비어있습니다."));
+            }
+
+            String username = session == null ? null : (String) session.getAttribute("USERNAME");
+
+            long deleted = transactionService.unconfirmMonth(
+                    request.getProvider(),
+                    request.getYear(),
+                    request.getMonth(),
+                    username
+            );
+            return ResponseEntity.ok(ImportUnconfirmResponse.ok(deleted));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ImportUnconfirmResponse.fail(e.getMessage()));
         }
     }
 }
