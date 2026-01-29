@@ -1961,6 +1961,7 @@ async function initApp() {
     initPreviewBulkControls();
     initTxSearchUI();
     initDashboardControls();
+    setupFixedItemTabs();
     await refreshAuthUI();
     await initAuth();
     initFixedExpenseUI();
