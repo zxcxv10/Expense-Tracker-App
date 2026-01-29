@@ -382,7 +382,12 @@ public class ImportPreviewService {
                 }
             }
 
-            rows.add(new ImportPreviewRow(cur.dateIso, cur.description, amount, ""));
+            ImportPreviewRow row = new ImportPreviewRow(cur.dateIso, cur.description, amount, "");
+            row.setTxDetail(cur.description);
+            if (cur.balance != null) {
+                row.setPostBalance(cur.balance);
+            }
+            rows.add(row);
         }
 
         return rows;
@@ -530,6 +535,7 @@ public class ImportPreviewService {
 
         Double withdraw = parseAmountToken(tokens[amountIdx]);
         Double deposit = parseAmountToken(tokens[amountIdx + 1]);
+        Double balance = parseAmountToken(tokens[amountIdx + 2]);
         if (withdraw == null || deposit == null) {
             return null;
         }
@@ -539,7 +545,12 @@ public class ImportPreviewService {
         if (description.isBlank()) {
             description = "거래내역";
         }
-        return new ImportPreviewRow(dateIso, description, amount, "");
+        ImportPreviewRow row = new ImportPreviewRow(dateIso, description, amount, "");
+        row.setTxDetail(description);
+        if (balance != null) {
+            row.setPostBalance(balance);
+        }
+        return row;
     }
 
     private static String sanitizeTossBlock(String block) {
@@ -634,6 +645,12 @@ public class ImportPreviewService {
             return null;
         }
 
+        // 토스는 보통 [거래금액][잔액] 순서라서 두 번째 금액을 잔액으로 추정
+        Double postBalance = null;
+        if (amountTokens.size() >= 2) {
+            postBalance = parseAmountToken(amountTokens.get(1));
+        }
+
         int firstAmountIdx = -1;
         for (int i = 0; i < tokens.length; i++) {
             if (isAmountToken(tokens[i])) {
@@ -682,7 +699,13 @@ public class ImportPreviewService {
 
         String category = classifyTossCategory(type, memo);
 
-        return new ImportPreviewRow(dateIso, description, amount, category);
+        ImportPreviewRow row = new ImportPreviewRow(dateIso, description, amount, category);
+        row.setTxType(type);
+        row.setTxDetail(memo);
+        if (postBalance != null) {
+            row.setPostBalance(postBalance);
+        }
+        return row;
     }
 
     private static String classifyTossCategory(String type, String memo) {

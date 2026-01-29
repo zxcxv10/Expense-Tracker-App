@@ -7,7 +7,10 @@ public class ImportPreviewRow {
 
     private String date;
     private String description;
+    private String txType;
+    private String txDetail;
     private Double amount;
+    private Double postBalance;
     private String category;
     private List<String> errors = new ArrayList<>();
 
@@ -37,12 +40,36 @@ public class ImportPreviewRow {
         this.description = description;
     }
 
+    public String getTxType() {
+        return txType;
+    }
+
+    public void setTxType(String txType) {
+        this.txType = txType;
+    }
+
+    public String getTxDetail() {
+        return txDetail;
+    }
+
+    public void setTxDetail(String txDetail) {
+        this.txDetail = txDetail;
+    }
+
     public Double getAmount() {
         return amount;
     }
 
     public void setAmount(Double amount) {
         this.amount = amount;
+    }
+
+    public Double getPostBalance() {
+        return postBalance;
+    }
+
+    public void setPostBalance(Double postBalance) {
+        this.postBalance = postBalance;
     }
 
     public String getCategory() {

@@ -44,6 +44,9 @@ public class FixedExpense {
     @Column(name = "status", length = 10)
     private String status;
 
+    @Column(name = "type", length = 20)
+    private String type;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -134,6 +137,14 @@ public class FixedExpense {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public LocalDateTime getCreatedAt() {

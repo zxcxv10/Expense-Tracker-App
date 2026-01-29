@@ -21,6 +21,10 @@ import jakarta.persistence.UniqueConstraint;
                 @UniqueConstraint(
                         name = "uk_tx_fixed_expense_month",
                         columnNames = {"created_by", "fixed_expense_id", "gen_year", "gen_month"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_tx_fixed_income_month",
+                        columnNames = {"created_by", "fixed_income_id", "gen_year", "gen_month"}
                 )
         }
 )
@@ -45,8 +49,17 @@ public class Transaction {
     @Column(name = "description", nullable = false, length = 500)
     private String description;
 
+    @Column(name = "tx_type", length = 50)
+    private String txType;
+
+    @Column(name = "tx_detail", length = 500)
+    private String txDetail;
+
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "post_balance", precision = 12, scale = 2)
+    private BigDecimal postBalance;
 
     @Column(name = "category", length = 50)
     private String category;
@@ -74,6 +87,9 @@ public class Transaction {
 
     @Column(name = "fixed_expense_id")
     private Long fixedExpenseId;
+
+    @Column(name = "fixed_income_id")
+    private Long fixedIncomeId;
 
     @Column(name = "gen_year")
     private Integer genYear;
@@ -146,12 +162,36 @@ public class Transaction {
         this.description = description;
     }
 
+    public String getTxType() {
+        return txType;
+    }
+
+    public void setTxType(String txType) {
+        this.txType = txType;
+    }
+
+    public String getTxDetail() {
+        return txDetail;
+    }
+
+    public void setTxDetail(String txDetail) {
+        this.txDetail = txDetail;
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public BigDecimal getPostBalance() {
+        return postBalance;
+    }
+
+    public void setPostBalance(BigDecimal postBalance) {
+        this.postBalance = postBalance;
     }
 
     public String getCategory() {
@@ -224,6 +264,14 @@ public class Transaction {
 
     public void setFixedExpenseId(Long fixedExpenseId) {
         this.fixedExpenseId = fixedExpenseId;
+    }
+
+    public Long getFixedIncomeId() {
+        return fixedIncomeId;
+    }
+
+    public void setFixedIncomeId(Long fixedIncomeId) {
+        this.fixedIncomeId = fixedIncomeId;
     }
 
     public Integer getGenYear() {

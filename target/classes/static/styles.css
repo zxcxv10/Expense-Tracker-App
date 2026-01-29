@@ -211,6 +211,39 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     color: #2563eb;
 }
 
+ #tx-search-section .dashboard-controls {
+     display: flex;
+     align-items: center;
+     flex-wrap: nowrap;
+     gap: 10px;
+ }
+
+ #tx-search-section .dashboard-controls label {
+     margin: 0;
+     white-space: nowrap;
+ }
+
+ #tx-search-section .dashboard-controls label[for="tx-search-size"] {
+     margin-left: auto;
+ }
+
+ #tx-search-section .dashboard-controls input[type="date"] {
+     width: 160px;
+     min-width: 160px;
+     padding: 8px 10px;
+ }
+
+ #tx-search-section .dashboard-controls select {
+     width: 90px;
+     min-width: 90px;
+ }
+
+ @media (max-width: 960px) {
+     #tx-search-section .dashboard-controls {
+         flex-wrap: wrap;
+     }
+ }
+
 /* 메인 콘텐츠 */
 .main-content {
     flex: 1;
@@ -334,6 +367,277 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
 .preview-pagination .page-info {
     font-size: 13px;
     color: #6b7280;
+}
+
+.preview-top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    align-items: stretch;
+}
+
+@media (max-width: 980px) {
+    .preview-top-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.preview-top-card {
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 12px;
+    padding: 12px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-top-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #374151;
+    margin-bottom: 10px;
+}
+
+.preview-top-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.preview-top-title-row .preview-top-title {
+    margin-bottom: 0;
+}
+
+.preview-bulk-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+.preview-bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.preview-bulk-actions .execute-btn {
+    min-width: 84px;
+}
+
+.preview-bulk-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #374151;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.preview-top-title-row .preview-bulk-toggle-title {
+    margin: 0 0 0 auto;
+}
+
+.preview-selected-count {
+    font-size: 12px;
+    color: #6b7280;
+    min-height: 18px;
+}
+
+.preview-bulk-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.preview-bulk-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.preview-bulk-bar select {
+    min-width: 140px;
+    height: 36px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #fff;
+    font-size: 13px;
+}
+
+#tx-search-section .dashboard-controls {
+    margin-bottom: 0;
+}
+
+#tx-search-section .tx-search-clean-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 140px;
+    grid-template-areas:
+        "start end reset"
+        "size size search"
+        "confirm confirm confirm";
+    gap: 10px;
+    align-items: stretch;
+}
+
+@media (max-width: 680px) {
+    #tx-search-section .tx-search-clean-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "start"
+            "end"
+            "reset"
+            "size"
+            "search"
+            "confirm";
+        gap: 10px;
+    }
+}
+
+#tx-search-section .tx-search-start { grid-area: start; }
+#tx-search-section .tx-search-end { grid-area: end; }
+#tx-search-section .tx-search-size { grid-area: size; }
+
+#tx-search-section .tx-search-actions-top { grid-area: reset; }
+#tx-search-section .tx-search-actions-bottom { grid-area: search; }
+
+#tx-search-section .tx-search-confirm {
+    grid-area: confirm;
+}
+
+#tx-search-section .tx-search-confirm .execute-btn {
+    width: 100%;
+    height: 40px;
+}
+
+#tx-search-section .tx-search-actions-top,
+#tx-search-section .tx-search-actions-bottom {
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+#tx-search-section .tx-search-actions-top .execute-btn,
+#tx-search-section .tx-search-actions-bottom .execute-btn {
+    width: 100%;
+    height: 40px;
+}
+
+#tx-search-section .tx-search-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#tx-search-section .tx-search-field label {
+    margin: 0;
+    font-size: 13px;
+    color: #374151;
+    font-weight: 700;
+}
+
+#tx-search-section .tx-search-field input[type="date"],
+#tx-search-section .tx-search-field select {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #fff;
+    font-size: 13px;
+}
+
+/* date input: hide browser default hint text (e.g. '연도-월-일') when empty */
+#tx-search-section .tx-search-field input[type="date"].is-empty {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+#tx-search-section .tx-search-field input[type="date"]:not(.is-empty) {
+    color: #111827;
+    -webkit-text-fill-color: #111827;
+}
+
+/* date input: in-field label (placeholder-like) */
+#tx-search-section .tx-date-field {
+    position: relative;
+    width: 100%;
+}
+
+#tx-search-section .tx-date-field .tx-infield-label {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+#tx-search-section .tx-date-field input[type="date"]:not(.is-empty) + .tx-infield-label {
+    display: none;
+}
+
+/* tx-search: align all control visuals */
+#tx-search-section .execute-btn {
+    height: 40px;
+    padding: 0 12px;
+    margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#tx-search-section .tx-search-size {
+    display: block;
+}
+
+#tx-search-section .tx-search-size select {
+    width: 100%;
+}
+
+#tx-search-section .tx-search-col-actions .execute-btn {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+}
+
+#tx-search-section #tx-search-btn {
+    margin-top: 0;
+}
+
+.preview-bulk-bar .execute-btn {
+    height: 36px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-bulk-bar input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
 }
 
 .dashboard-controls {
@@ -554,48 +858,81 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
      color: #111827;
  }
 
- .auth-btn {
-     padding: 8px 12px;
-     border-radius: 8px;
-     border: 1px solid rgba(229, 231, 235, 0.9);
-     background: #ffffff;
-     cursor: pointer;
-     font-weight: 700;
- }
+.auth-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #ffffff;
+    cursor: pointer;
+    font-weight: 700;
+}
 
- .modal-overlay {
-     position: fixed;
-     inset: 0;
-     background: rgba(0, 0, 0, 0.45);
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     z-index: 9999;
- }
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 9999;
+}
 
- .modal {
-     width: 420px;
-     max-width: calc(100vw - 24px);
-     background: #ffffff;
-     border-radius: 12px;
-     overflow: hidden;
-     border: 1px solid rgba(229, 231, 235, 0.9);
- }
+.modal {
+    width: 420px;
+    max-width: calc(100vw - 24px);
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+    border: 1px solid rgba(229, 231, 235, 0.9);
+}
 
- .modal-header {
-     display: flex;
-     align-items: center;
-     justify-content: space-between;
-     padding: 14px 16px;
-     border-bottom: 1px solid rgba(229, 231, 235, 0.9);
- }
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.9);
+}
 
- .modal-close {
-     border: none;
-     background: transparent;
-     font-size: 22px;
-     cursor: pointer;
- }
+#dashboard-day-modal .modal {
+    width: 980px;
+    max-width: calc(100vw - 24px);
+}
+
+#dashboard-day-modal .modal-body {
+    max-height: min(75vh, 720px);
+    overflow: auto;
+}
+
+#dashboard-day-modal #dashboard-day-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 840px;
+}
+
+#dashboard-day-modal #dashboard-day-table th,
+#dashboard-day-modal #dashboard-day-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center !important;
+}
+
+#dashboard-day-modal #dashboard-day-table th:nth-child(1),
+#dashboard-day-modal #dashboard-day-table td:nth-child(1) { width: 90px; }
+#dashboard-day-modal #dashboard-day-table th:nth-child(2),
+#dashboard-day-modal #dashboard-day-table td:nth-child(2) { width: 110px; }
+#dashboard-day-modal #dashboard-day-table th:nth-child(3),
+#dashboard-day-modal #dashboard-day-table td:nth-child(3) { width: 110px; }
+#dashboard-day-modal #dashboard-day-table th:nth-child(4),
+#dashboard-day-modal #dashboard-day-table td:nth-child(4) { width: 260px; }
+#dashboard-day-modal #dashboard-day-table th:nth-child(5),
+#dashboard-day-modal #dashboard-day-table td:nth-child(5) { width: 120px; }
+#dashboard-day-modal #dashboard-day-table th:nth-child(6),
+#dashboard-day-modal #dashboard-day-table td:nth-child(6) { width: 120px; }
+#dashboard-day-modal #dashboard-day-table th:nth-child(7),
+#dashboard-day-modal #dashboard-day-table td:nth-child(7) { width: 140px; }
 
  .modal-tabs {
      display: grid;
@@ -685,50 +1022,48 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
 }
 
 .year-tab {
-    padding: 8px 14px;
-    background-color: rgba(241, 245, 249, 0.8);
-    border: 1px solid rgba(229, 231, 235, 0.6);
-    border-radius: 999px;
+    padding: 6px 10px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     font-weight: 700;
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, border-color 0.2s ease;
     user-select: none;
+    color: rgba(55, 65, 81, 0.85);
 }
 
 .year-tab:hover {
-    background-color: rgba(229, 231, 235, 0.9);
-    border-color: rgba(209, 213, 219, 0.8);
-    color: #374151;
+    color: #111827;
 }
 
 .year-tab.active {
-    background-color: rgba(34, 197, 94, 0.12);
-    border-color: rgba(34, 197, 94, 0.45);
+    border-bottom-color: rgba(34, 197, 94, 0.85);
     color: #16a34a;
 }
 
 .month-tab {
-    padding: 8px 14px;
-    background-color: rgba(241, 245, 249, 0.8);
-    border: 1px solid rgba(229, 231, 235, 0.6);
-    color: #6b7280;
+    padding: 6px 10px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: rgba(107, 114, 128, 0.95);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, border-color 0.2s ease;
     user-select: none;
 }
 
 .month-tab:hover {
-    background-color: rgba(229, 231, 235, 0.9);
-    border-color: rgba(209, 213, 219, 0.8);
-    color: #374151;
+    color: #111827;
 }
 
 .month-tab.active {
-    background-color: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.4);
+    border-bottom-color: rgba(59, 130, 246, 0.85);
     color: #2563eb;
 }
 
@@ -738,49 +1073,89 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
     gap: 8px;
     flex-wrap: wrap;
     margin-top: 6px;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    width: auto;
 }
 
 .bank-tab {
-    padding: 8px 14px;
-    background-color: rgba(241, 245, 249, 0.8);
-    border: 1px solid rgba(229, 231, 235, 0.6);
-    border-radius: 4px;
-    color: #6b7280;
+    padding: 6px 10px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: rgba(107, 114, 128, 0.95);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .bank-tab:hover {
-    background-color: rgba(229, 231, 235, 0.9);
-    border-color: rgba(209, 213, 219, 0.8);
-    color: #374151;
+    color: #111827;
 }
 
 .bank-tab.active {
-    background-color: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.4);
+    border-bottom-color: rgba(59, 130, 246, 0.85);
     color: #2563eb;
 }
 
 /* 파일 업로드 관련 스타일 */
 .upload-section {
     margin-bottom: 30px;
+    padding: 14px;
+    border: 1px solid rgba(229, 231, 235, 0.7);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.upload-section .form-group {
+    margin-bottom: 12px;
 }
 
 .upload-area {
     border: 1px dashed rgba(148, 163, 184, 0.35);
     border-radius: 10px;
-    padding: 22px;
-    background: rgba(248, 250, 252, 0.8);
+    padding: 14px;
+    background: rgba(248, 250, 252, 0.85);
+    margin-top: 12px;
     cursor: pointer;
     transition: border-color 160ms ease, background 160ms ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    min-height: 92px;
+}
+
+.upload-area .selected-file {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background-color: rgba(240, 253, 244, 0.55);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    border-radius: 10px;
+    width: 100%;
+}
+
+.upload-area .file-name {
+    color: #065f46;
+}
+
+.upload-area .file-remove-btn {
+    color: #065f46;
 }
 
 .upload-area.dragover {
     border-color: rgba(59, 130, 246, 0.6);
     background: rgba(59, 130, 246, 0.06);
+}
+
+.upload-area:hover {
+    border-color: rgba(59, 130, 246, 0.45);
+    background: rgba(248, 250, 252, 0.95);
 }
 
 .upload-icon {
@@ -789,16 +1164,58 @@ font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Inter', system-ui
 }
 
 .upload-text {
-    font-size: 16px;
+    font-size: 14px;
     color: #374151;
-    margin-bottom: 8px;
-    font-weight: 500;
+    margin: 0;
+    font-weight: 700;
 }
 
 .upload-hint {
-    font-size: 14px;
+    font-size: 12px;
     color: #6b7280;
     margin: 0;
+}
+
+.selected-file {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background-color: rgba(240, 253, 244, 0.9);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 10px;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.file-name {
+    font-weight: 700;
+    color: #065f46;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-remove-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+}
+
+#upload-next-btn {
+    margin-top: 10px;
+    height: 40px;
+    border-radius: 10px;
+    width: 100%;
+    font-weight: 700;
+}
+
+#upload-next-btn:disabled {
+    background-color: rgba(229, 231, 235, 0.9);
+    color: rgba(107, 114, 128, 0.9);
 }
 
 .file-format-info {
@@ -1377,6 +1794,15 @@ select option {
     font-size: 14px;
 }
 
+ .calendar-cell.clickable {
+     cursor: pointer;
+ }
+
+ .calendar-cell.clickable:hover {
+     border-color: rgba(59, 130, 246, 0.55);
+     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+ }
+
 .dashboard-charts {
     display: grid;
     grid-template-columns: 1fr;
@@ -1388,6 +1814,13 @@ select option {
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
+
+ .summary-mom {
+     grid-column: 1 / -1;
+     font-size: 13px;
+     color: #6b7280;
+     padding: 2px 2px 0 2px;
+ }
 
 .summary-card {
     background: #ffffff;
@@ -1516,6 +1949,36 @@ select option {
     color: #6b7280;
 }
 
+.fixed-expense-type-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.fixed-expense-type-tabs .type-tab {
+    border: 0;
+    background: transparent;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(31, 41, 55, 0.75);
+    cursor: pointer;
+}
+
+.fixed-expense-type-tabs .type-tab.active {
+    background: rgba(59, 130, 246, 0.14);
+    color: #2563eb;
+}
+
+.fixed-expense-type-tabs .type-tab:hover {
+    background: rgba(31, 41, 55, 0.06);
+}
+
 .fixed-expense-filter label {
     white-space: nowrap;
 }
@@ -1530,10 +1993,22 @@ select option {
 
 .fixed-expense-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
     margin: 12px 0 14px 0;
 }
+
+ @media (max-width: 980px) {
+     .fixed-expense-summary {
+         grid-template-columns: repeat(2, 1fr);
+     }
+ }
+
+ @media (max-width: 520px) {
+     .fixed-expense-summary {
+         grid-template-columns: 1fr;
+     }
+ }
 
 .fixed-expense-summary-card {
     border: 1px solid rgba(229, 231, 235, 0.9);

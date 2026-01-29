@@ -151,6 +151,12 @@ public class FixedExpenseService {
         entity.setBillingDay(billingDay);
         entity.setMemo(safeTrim(request.getMemo()));
 
+        String type = normalizeType(request.getType());
+        if (type == null) {
+            type = "NORMAL";
+        }
+        entity.setType(type);
+
         String status = normalizeStatus(request.getStatus());
         if (status == null) {
             status = "ACTIVE";
@@ -182,6 +188,17 @@ public class FixedExpenseService {
         return s;
     }
 
+    private String normalizeType(String type) {
+        String t = safeTrim(type).toUpperCase();
+        if (t.isBlank() || "ALL".equals(t)) {
+            return null;
+        }
+        if (!"NORMAL".equals(t) && !"SUBSCRIPTION".equals(t)) {
+            throw new IllegalArgumentException("구분값이 올바르지 않습니다.");
+        }
+        return t;
+    }
+
     private String safeTrim(String value) {
         return value == null ? "" : value.trim();
     }
@@ -196,6 +213,7 @@ public class FixedExpenseService {
         item.setBillingDay(e.getBillingDay());
         item.setMemo(e.getMemo());
         item.setStatus(e.getStatus());
+        item.setType(e.getType());
         item.setCreatedAt(e.getCreatedAt() == null ? null : e.getCreatedAt().toString());
         item.setUpdatedAt(e.getUpdatedAt() == null ? null : e.getUpdatedAt().toString());
         return item;

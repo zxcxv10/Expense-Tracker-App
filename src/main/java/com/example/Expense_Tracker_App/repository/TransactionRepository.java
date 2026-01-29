@@ -1,12 +1,14 @@
 package com.example.Expense_Tracker_App.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import com.example.Expense_Tracker_App.entity.Transaction;
 
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
 
     boolean existsByProviderAndTxYearAndTxMonthAndConfirmed(String provider, Integer txYear, Integer txMonth, String confirmed);
 
@@ -61,6 +63,27 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             Integer genMonth
     );
 
+    boolean existsByProviderAndFixedIncomeIdAndConfirmedAndCreatedBy(
+            String provider,
+            Long fixedIncomeId,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByProviderAndFixedIncomeIdAndConfirmedAndCreatedByOrderByTxYearAscTxMonthAscTxDateAscIdAsc(
+            String provider,
+            Long fixedIncomeId,
+            String confirmed,
+            String createdBy
+    );
+
+    boolean existsByCreatedByAndFixedIncomeIdAndGenYearAndGenMonth(
+            String createdBy,
+            Long fixedIncomeId,
+            Integer genYear,
+            Integer genMonth
+    );
+
     List<Transaction> findByTxYearAndTxMonthAndConfirmedOrderByTxDateAscIdAsc(
             Integer txYear,
             Integer txMonth,
@@ -70,6 +93,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(
             Integer txYear,
             Integer txMonth,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(
+            Integer txYear,
+            Integer txMonth,
+            LocalDate txDate,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByProviderAndTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(
+            String provider,
+            Integer txYear,
+            Integer txMonth,
+            LocalDate txDate,
             String confirmed,
             String createdBy
     );

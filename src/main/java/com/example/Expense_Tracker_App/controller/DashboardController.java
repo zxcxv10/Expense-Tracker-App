@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.Expense_Tracker_App.dto.DashboardCategoryResponse;
+import com.example.Expense_Tracker_App.dto.DashboardDayTransactionsResponse;
 import com.example.Expense_Tracker_App.dto.DashboardDailyResponse;
 import com.example.Expense_Tracker_App.dto.DashboardMonthlyResponse;
 import com.example.Expense_Tracker_App.service.DashboardService;
@@ -73,6 +74,22 @@ public class DashboardController {
             return ResponseEntity.ok(dashboardService.getDaily(year, month, provider, username));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(DashboardDailyResponse.fail(e.getMessage()));
+        }
+    }
+
+    @GetMapping(value = "/day-transactions", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DashboardDayTransactionsResponse> dayTransactions(
+            @RequestParam(value = "year", required = false) Integer year,
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "day", required = false) Integer day,
+            @RequestParam(value = "provider", required = false) String provider,
+            HttpSession session
+    ) {
+        try {
+            String username = session == null ? null : (String) session.getAttribute("USERNAME");
+            return ResponseEntity.ok(dashboardService.getDayTransactions(year, month, day, provider, username));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(DashboardDayTransactionsResponse.fail(e.getMessage()));
         }
     }
 }

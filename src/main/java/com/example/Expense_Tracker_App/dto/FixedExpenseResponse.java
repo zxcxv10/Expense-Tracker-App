@@ -90,6 +90,7 @@ public class FixedExpenseResponse {
         private Integer billingDay;
         private String memo;
         private String status;
+        private String type;
         private String createdAt;
         private String updatedAt;
 
@@ -158,6 +159,14 @@ public class FixedExpenseResponse {
 
         public void setStatus(String status) {
             this.status = status;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
         }
 
         public String getCreatedAt() {

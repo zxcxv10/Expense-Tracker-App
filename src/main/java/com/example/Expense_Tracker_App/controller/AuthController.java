@@ -17,6 +17,7 @@ import com.example.Expense_Tracker_App.dto.AuthSignupRequest;
 import com.example.Expense_Tracker_App.entity.User;
 import com.example.Expense_Tracker_App.repository.UserRepository;
 import com.example.Expense_Tracker_App.service.FixedExpenseAutoService;
+import com.example.Expense_Tracker_App.service.FixedIncomeAutoService;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -27,15 +28,18 @@ public class AuthController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final FixedExpenseAutoService fixedExpenseAutoService;
+    private final FixedIncomeAutoService fixedIncomeAutoService;
 
     public AuthController(
             UserRepository userRepository,
             BCryptPasswordEncoder passwordEncoder,
-            FixedExpenseAutoService fixedExpenseAutoService
+            FixedExpenseAutoService fixedExpenseAutoService,
+            FixedIncomeAutoService fixedIncomeAutoService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.fixedExpenseAutoService = fixedExpenseAutoService;
+        this.fixedIncomeAutoService = fixedIncomeAutoService;
     }
 
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -93,6 +97,12 @@ public class AuthController {
 
             try {
                 fixedExpenseAutoService.ensureSetting(saved.getUsername());
+            } catch (Exception ignore) {
+                // 가입 흐름은 설정 생성 실패로 막지 않는다.
+            }
+
+            try {
+                fixedIncomeAutoService.ensureSetting(saved.getUsername());
             } catch (Exception ignore) {
                 // 가입 흐름은 설정 생성 실패로 막지 않는다.
             }

@@ -1,6 +1,7 @@
 package com.example.Expense_Tracker_App.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,6 +12,8 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.Expense_Tracker_App.dto.DashboardDayTransactionsResponse;
+import com.example.Expense_Tracker_App.dto.DashboardDayTxItem;
 import com.example.Expense_Tracker_App.dto.DashboardDailyResponse;
 import com.example.Expense_Tracker_App.dto.DashboardMonthlyResponse;
 import com.example.Expense_Tracker_App.entity.Transaction;
@@ -203,5 +206,54 @@ public class DashboardService {
             days.add(new DashboardDailyResponse.DailyAmount(d, income[d], expense[d]));
         }
         return DashboardDailyResponse.ok(year, month, isAll ? "ALL" : p, days);
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardDayTransactionsResponse getDayTransactions(Integer year, Integer month, Integer day, String provider, String username) {
+        if (year == null || month == null || day == null) {
+            throw new IllegalArgumentException("year, month, day는 필수입니다.");
+        }
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("month가 올바르지 않습니다.");
+        }
+        YearMonth ym = YearMonth.of(year, month);
+        int lastDay = ym.lengthOfMonth();
+        if (day < 1 || day > lastDay) {
+            throw new IllegalArgumentException("day가 올바르지 않습니다.");
+        }
+
+        String u = username == null ? "" : username.trim();
+        if (u.isBlank()) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+
+        String p = provider == null ? "ALL" : provider.trim().toUpperCase();
+        boolean isAll = p.isBlank() || "ALL".equalsIgnoreCase(p);
+
+        LocalDate date = LocalDate.of(year, month, day);
+        List<Transaction> list = isAll
+                ? transactionRepository.findByTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(year, month, date, "Y", u)
+                : transactionRepository.findByProviderAndTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(p, year, month, date, "Y", u);
+
+        List<DashboardDayTxItem> items = new ArrayList<>();
+        if (list != null) {
+            for (Transaction t : list) {
+                if (t == null) continue;
+                items.add(new DashboardDayTxItem(
+                        t.getId(),
+                        t.getTxDate() == null ? null : t.getTxDate().toString(),
+                        t.getProvider(),
+                        t.getDescription(),
+                        t.getTxType(),
+                        t.getTxDetail(),
+                        t.getCategory(),
+                        t.getAmount() == null ? null : t.getAmount().doubleValue(),
+                        t.getPostBalance() == null ? null : t.getPostBalance().doubleValue(),
+                        t.getConfirmed()
+                ));
+            }
+        }
+
+        return DashboardDayTransactionsResponse.ok(year, month, day, isAll ? "ALL" : p, items);
     }
 }
