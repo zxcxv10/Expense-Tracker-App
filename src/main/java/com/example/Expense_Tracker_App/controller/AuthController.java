@@ -1,6 +1,7 @@
 package com.example.Expense_Tracker_App.controller;
 
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -93,6 +94,7 @@ public class AuthController {
             user.setUsername(u);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole("USER");
+            user.setEnabled(true);
             User saved = userRepository.save(user);
 
             try {
@@ -139,9 +141,15 @@ public class AuthController {
             }
 
             User user = opt.get();
+            if (user.getEnabled() != null && !user.getEnabled()) {
+                return ResponseEntity.badRequest().body(AuthResponse.fail("비활성화된 계정입니다."));
+            }
             if (!passwordEncoder.matches(password, user.getPassword())) {
                 return ResponseEntity.badRequest().body(AuthResponse.fail("아이디/비밀번호가 올바르지 않습니다."));
             }
+
+            user.setLastLoginAt(LocalDateTime.now());
+            userRepository.save(user);
 
             if (session != null) {
                 session.setAttribute("USER_ID", user.getId());

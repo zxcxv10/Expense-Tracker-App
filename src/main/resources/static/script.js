@@ -8,6 +8,8 @@ const previewSelectedIndices = new Set();
 let previewDateFilterStart = '';
 let previewDateFilterEnd = '';
 
+let currentUserRole = '';
+
 const CATEGORY_OPTIONS_EXPENSE = [
     '식비',
     '편의점/마트',
@@ -1681,6 +1683,10 @@ function showContentPanel(panelId) {
     if (panelId === 'fixed-expense') {
         loadFixedExpenses();
     }
+
+    if (panelId === 'admin') {
+        loadAdminUsers();
+    }
 }
 
 async function refreshAuthUI() {
@@ -1694,27 +1700,187 @@ async function refreshAuthUI() {
         const data = await res.json();
         if (!res.ok || !data?.success) {
             isLoggedIn = false;
+            currentUserRole = '';
             userEl.textContent = '로그인 필요';
             userEl.style.display = '';
             openBtn.style.display = '';
             logoutBtn.style.display = 'none';
+            const adminMenu = document.getElementById('admin-menu');
+            if (adminMenu) adminMenu.style.display = 'none';
             syncUnconfirmButtonVisibility();
             return;
         }
 
         isLoggedIn = true;
+        currentUserRole = String(data.role || '').trim().toUpperCase();
         userEl.textContent = `${data.username}`;
         userEl.style.display = '';
         openBtn.style.display = 'none';
         logoutBtn.style.display = '';
+        const adminMenu = document.getElementById('admin-menu');
+        if (adminMenu) adminMenu.style.display = (currentUserRole === 'ADMIN') ? '' : 'none';
         syncUnconfirmButtonVisibility();
     } catch {
         isLoggedIn = false;
+        currentUserRole = '';
         userEl.textContent = '로그인 필요';
         userEl.style.display = '';
         openBtn.style.display = '';
         logoutBtn.style.display = 'none';
+        const adminMenu = document.getElementById('admin-menu');
+        if (adminMenu) adminMenu.style.display = 'none';
         syncUnconfirmButtonVisibility();
+    }
+}
+
+function formatAdminDateTime(v) {
+    if (!v) return '';
+    const s = String(v);
+    return s.replace('T', ' ').slice(0, 19);
+}
+
+async function loadAdminUsers() {
+    const tbody = document.getElementById('admin-user-tbody');
+    const qEl = document.getElementById('admin-user-query');
+    if (!tbody) return;
+
+    if (!isLoggedIn || String(currentUserRole).toUpperCase() !== 'ADMIN') {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">권한이 없습니다.</td></tr>`;
+        return;
+    }
+
+    const q = qEl ? String(qEl.value || '').trim() : '';
+    const qs = q ? `?query=${encodeURIComponent(q)}` : '';
+
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">불러오는 중...</td></tr>`;
+    try {
+        const res = await apiFetch(`/api/admin/users${qs}`);
+        const data = await res.json();
+        if (!res.ok || !data?.success) {
+            throw new Error(data?.error || '사용자 목록을 불러오지 못했습니다.');
+        }
+
+        const users = Array.isArray(data.users) ? data.users : [];
+        if (!users.length) {
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="7">사용자가 없습니다.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = users.map(u => {
+            const id = Number(u.id);
+            const username = escapeHtml(u.username || '');
+            const role = String(u.role || '').toUpperCase();
+            const enabled = (u.enabled === null || u.enabled === undefined) ? true : !!u.enabled;
+            const statusText = enabled ? '활성' : '비활성';
+            const createdAt = escapeHtml(formatAdminDateTime(u.createdAt));
+            const lastLoginAt = escapeHtml(formatAdminDateTime(u.lastLoginAt));
+            const nextEnabled = enabled ? 'false' : 'true';
+
+            return `
+                <tr>
+                    <td>${Number.isFinite(id) ? id : ''}</td>
+                    <td>${username}</td>
+                    <td>${escapeHtml(role || '')}</td>
+                    <td>${escapeHtml(statusText)}</td>
+                    <td>${createdAt}</td>
+                    <td>${lastLoginAt}</td>
+                    <td>
+                        <div class="admin-user-actions">
+                            <select class="admin-role-select" data-admin-role-select="1" data-user-id="${id}" aria-label="권한 선택">
+                                <option value="USER" ${role === 'USER' ? 'selected' : ''}>USER</option>
+                                <option value="ADMIN" ${role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
+                            </select>
+                            <button type="button" class="execute-btn outline compact-btn" data-admin-action="apply-role" data-user-id="${id}">권한 변경</button>
+                            <button type="button" class="execute-btn outline compact-btn" data-admin-action="enabled" data-user-id="${id}" data-enabled="${nextEnabled}">${enabled ? '비활성화' : '활성화'}</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${escapeHtml(e?.message || '오류가 발생했습니다.')}</td></tr>`;
+    }
+}
+
+async function adminUpdateUser(id, patch) {
+    const res = await apiFetch(`/api/admin/users/${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch || {})
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.success) {
+        throw new Error(data?.error || '변경에 실패했습니다.');
+    }
+    return data;
+}
+
+function initAdminUI() {
+    const panel = document.getElementById('admin-content');
+    if (!panel || panel.dataset.bound) return;
+    panel.dataset.bound = '1';
+
+    const tbody = document.getElementById('admin-user-tbody');
+    const searchBtn = document.getElementById('admin-user-search-btn');
+    const refreshBtn = document.getElementById('admin-user-refresh-btn');
+    const qEl = document.getElementById('admin-user-query');
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            loadAdminUsers();
+        });
+    }
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            if (qEl) qEl.value = '';
+            loadAdminUsers();
+        });
+    }
+    if (qEl) {
+        qEl.addEventListener('keydown', (e) => {
+            if (e && e.key === 'Enter') {
+                e.preventDefault();
+                loadAdminUsers();
+            }
+        });
+    }
+
+    if (tbody && !tbody.dataset.bound) {
+        tbody.dataset.bound = '1';
+        tbody.addEventListener('click', async (e) => {
+            const btn = e?.target?.closest('button[data-admin-action]');
+            if (!btn) return;
+            const action = String(btn.dataset.adminAction || '').trim();
+            const id = btn.dataset.userId;
+            if (!id) return;
+
+            try {
+                btn.disabled = true;
+                if (action === 'apply-role') {
+                    const row = btn.closest('tr');
+                    const sel = row ? row.querySelector('select[data-admin-role-select="1"]') : null;
+                    const role = sel ? String(sel.value || '').trim().toUpperCase() : '';
+                    if (!role) return;
+                    await adminUpdateUser(id, { role });
+                    showToast('권한 변경 완료', 'success');
+                    await refreshAuthUI();
+                    await loadAdminUsers();
+                    return;
+                }
+                if (action === 'enabled') {
+                    const enabled = String(btn.dataset.enabled || '').trim().toLowerCase() === 'true';
+                    await adminUpdateUser(id, { enabled });
+                    showToast('계정 상태 변경 완료', 'success');
+                    await refreshAuthUI();
+                    await loadAdminUsers();
+                    return;
+                }
+            } catch (err) {
+                showToast(err?.message || '변경에 실패했습니다.', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
     }
 }
 
@@ -1962,6 +2128,7 @@ async function initApp() {
     initTxSearchUI();
     initDashboardControls();
     setupFixedItemTabs();
+    initAdminUI();
     await refreshAuthUI();
     await initAuth();
     initFixedExpenseUI();

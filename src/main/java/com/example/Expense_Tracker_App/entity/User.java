@@ -27,6 +27,12 @@ public class User {
     @Column(name = "role", length = 20)
     private String role;
 
+    @Column(name = "enabled")
+    private Boolean enabled;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -34,6 +40,9 @@ public class User {
     public void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (enabled == null) {
+            enabled = true;
         }
     }
 
@@ -67,6 +76,22 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
     }
 
     public LocalDateTime getCreatedAt() {

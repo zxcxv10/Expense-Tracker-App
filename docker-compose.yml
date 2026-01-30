@@ -2,7 +2,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: expense-mysql
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
@@ -22,10 +22,9 @@ services:
       retries: 5
 
   app:
-    build:
-      context: .
+    image: jwy22/expense-app:latest 
     container_name: expense-app
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     depends_on:
@@ -34,7 +33,7 @@ services:
     ports:
       - "80:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-expense_tracker}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&connectTimeout=5000&socketTimeout=30000
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-expense_tracker}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-${MYSQL_ROOT_PASSWORD}}
 

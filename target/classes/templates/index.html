@@ -30,6 +30,12 @@
                             <div class="sub-menu-item" data-menu="fixed-expense">고정 항목</div>
                         </div>
                     </div>
+                    <div class="menu-item" id="admin-menu" style="display:none;">
+                        <span class="menu-title">관리자</span>
+                        <div class="sub-menu">
+                            <div class="sub-menu-item" data-menu="admin">사용자 관리</div>
+                        </div>
+                    </div>
                 </div>
             </nav>
 
@@ -504,6 +510,38 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-panel" id="admin-content">
+                        <div class="panel-header">
+                            <h1>관리자</h1>
+                            <p class="panel-description">사용자/권한/계정 상태 관리</p>
+                        </div>
+                        <div class="form-section">
+                            <div class="admin-user-toolbar">
+                                <input type="text" id="admin-user-query" placeholder="아이디 검색" />
+                                <button type="button" class="execute-btn outline compact-btn" id="admin-user-search-btn">검색</button>
+                                <button type="button" class="execute-btn outline compact-btn" id="admin-user-refresh-btn">새로고침</button>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="preview-table admin-user-table" id="admin-user-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:80px;">ID</th>
+                                            <th>아이디</th>
+                                            <th style="width:110px;">권한</th>
+                                            <th style="width:110px;">상태</th>
+                                            <th style="width:170px;">가입일</th>
+                                            <th style="width:170px;">최근 로그인</th>
+                                            <th style="width:220px;">관리</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-user-tbody">
+                                        <tr class="empty-row"><td colspan="7">사용자를 불러오려면 새로고침을 누르세요.</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
