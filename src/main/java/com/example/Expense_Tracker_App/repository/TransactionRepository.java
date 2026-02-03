@@ -127,6 +127,75 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             String createdBy
     );
 
+    List<Transaction> findByTxYearAndConfirmedAndCreatedByAndProviderNotIn(
+            Integer txYear,
+            String confirmed,
+            String createdBy,
+            List<String> provider
+    );
+
+    List<Transaction> findByTxYearAndTxMonthAndConfirmedAndCreatedByAndProviderNotInOrderByTxDateAscIdAsc(
+            Integer txYear,
+            Integer txMonth,
+            String confirmed,
+            String createdBy,
+            List<String> provider
+    );
+
+    List<Transaction> findByTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByAndProviderNotInOrderByTxDateAscIdAsc(
+            Integer txYear,
+            Integer txMonth,
+            LocalDate txDate,
+            String confirmed,
+            String createdBy,
+            List<String> provider
+    );
+
+    List<Transaction> findByTxYearAndConfirmedAndCreatedByAndFixedExpenseIdIsNullAndFixedIncomeIdIsNull(
+            Integer txYear,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByProviderAndTxYearAndConfirmedAndCreatedByAndFixedExpenseIdIsNullAndFixedIncomeIdIsNull(
+            String provider,
+            Integer txYear,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByTxYearAndTxMonthAndConfirmedAndCreatedByAndFixedExpenseIdIsNullAndFixedIncomeIdIsNullOrderByTxDateAscIdAsc(
+            Integer txYear,
+            Integer txMonth,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedByAndFixedExpenseIdIsNullAndFixedIncomeIdIsNullOrderByTxDateAscIdAsc(
+            String provider,
+            Integer txYear,
+            Integer txMonth,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByAndFixedExpenseIdIsNullAndFixedIncomeIdIsNullOrderByTxDateAscIdAsc(
+            Integer txYear,
+            Integer txMonth,
+            LocalDate txDate,
+            String confirmed,
+            String createdBy
+    );
+
+    List<Transaction> findByProviderAndTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByAndFixedExpenseIdIsNullAndFixedIncomeIdIsNullOrderByTxDateAscIdAsc(
+            String provider,
+            Integer txYear,
+            Integer txMonth,
+            LocalDate txDate,
+            String confirmed,
+            String createdBy
+    );
+
     long deleteByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedBy(
             String provider,
             Integer txYear,

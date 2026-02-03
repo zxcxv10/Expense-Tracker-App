@@ -1,23 +1,29 @@
 # Expense Tracker App (가계부)
 
-Spring Boot + MySQL 기반의 **가계부/거래내역 관리** 웹 애플리케이션입니다.
+Spring Boot + MySQL 기반의 개인 가계부 웹 앱입니다.
 
-은행/카드사에서 내려받은 **PDF 거래내역**을 업로드하여 미리보기 후 확정 저장하고, 확정된 데이터 기반으로 **대시보드(월별/카테고리별 분석)** 를 제공합니다.
+은행/카드사 PDF 거래내역을 업로드해 미리보기/수정 후 확정 저장하고,
+월별 대시보드 분석과 함께 고정지출/고정수입/투자자산/대출(월별 상환이력)까지 한 화면에서 관리합니다.
 
 ## 주요 기능
 
 - **인증(세션 기반)**
   - 로그인/회원가입/로그아웃
-  - 로그인 사용자별 데이터 격리(본인 데이터만 조회)
+  - 사용자별 데이터 격리(본인 데이터만 조회/변경)
 - **PDF 업로드/미리보기/확정 저장**
-  - PDF 업로드 후 거래내역 파싱 → 미리보기 테이블 표시
+  - PDF 파싱 → 미리보기 테이블 표시
   - 미리보기에서 행 수정(내용/금액/카테고리)
-  - "확정 저장" 시 DB에 저장되며 해당 월은 잠금(재저장/수정 불가)
-  - 비밀번호(PDF 암호) 걸린 파일은 비밀번호 입력 후 재시도
+  - 확정 저장 시 DB에 반영되며 월 단위로 잠금/해제 처리
 - **대시보드**
-  - 확정된 데이터(confirmed=Y) 기반
-  - 월별 수입/지출, 카테고리별 수입/지출, (전체 선택 시) 은행/카드사별 지출
-  - 로그인 후/새로고침 후 자동 로드
+  - 월별 수입/지출, 카테고리별 분석, (전체 선택 시) 제공처별 지출
+- **고정지출/고정수입 관리**
+  - 월별 확인/잠금 흐름 포함
+- **투자자산 관리**
+  - 자산 CRUD 및 요약 표시
+- **대출현황(월별 상환이력 기반)**
+  - 대출 마스터(현재 남은 원금) + 월별 상환 이력 분리
+  - 월(YYYY-MM) 선택 → 해당 월 상환 여부 조회 → "이번달 상환" 버튼 활성/비활성
+  - 중복 대출 항목 정리(동일 기관/대출명/종류는 1개만 남기기)
 
 ## 지원 PDF 형식(Provider)
 
@@ -26,59 +32,23 @@ Spring Boot + MySQL 기반의 **가계부/거래내역 관리** 웹 애플리케
 - `NH` (농협)
 - `HYUNDAI` (현대카드)
 
-> 주의: 확정 저장은 **한 번에 한 달(년/월) 데이터만** 허용합니다. (다른 월이 섞이면 오류)
-
 ## 기술 스택
 
-- **Backend**: Spring Boot 3.2, Spring Web, Spring Data JPA
+- **Backend**: Spring Boot, Spring Web, Spring Data JPA
 - **Auth**: HttpSession 기반 인증 + BCrypt(spring-security-crypto)
 - **DB**: MySQL
 - **PDF Parsing**: Apache PDFBox
-- **Frontend**: Thymeleaf(서빙) + Vanilla JS + Chart.js
+- **Frontend**: Thymeleaf + Vanilla JS + Chart.js
 
 ## 실행 방법 (로컬)
 
 ### 1) MySQL 준비
 
-MySQL에 DB 생성:
-
 ```sql
 CREATE DATABASE expense_tracker;
 ```
 
-`src/main/resources/application.properties`는 DB 접속정보를 **환경변수**로 받도록 구성되어 있습니다.
-
-로컬에서는 `.env.example`을 복사해 `.env`로 만든 뒤(커밋 금지), 환경변수를 주입해서 실행하세요.
-
-예시(Windows PowerShell):
-
-```powershell
-Copy-Item .env.example .env
-$env:SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul"
-$env:SPRING_DATASOURCE_USERNAME="root"
-$env:SPRING_DATASOURCE_PASSWORD="your_password"
-```
-
-예시(Unix/macOS):
-
-```bash
-cp .env.example .env
-export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul"
-export SPRING_DATASOURCE_USERNAME="root"
-export SPRING_DATASOURCE_PASSWORD="your_password"
-```
-
-참고: Docker/Compose 사용 시에는 `--env-file .env` 형태로 주입하는 방식을 권장합니다.
-
-기존 `application.properties` 예시(기본값):
-
-```properties
-server.port=8080
-
-spring.datasource.url=jdbc:mysql://localhost:3306/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-spring.datasource.username=
-spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}
-```
+`src/main/resources/application.properties`의 DB 접속 정보를 환경에 맞게 설정합니다.
 
 ### 2) 실행
 
@@ -86,39 +56,27 @@ spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}
 ./mvnw spring-boot:run
 ```
 
-접속:
+접속: http://localhost:8080
 
-- http://localhost:8080
+## 실행 방법 (Docker)
 
-## Docker 배포(권장: App + MySQL 분리)
+이 레포에는 `docker-compose.yml`이 포함되어 있습니다.
 
-현재 레포에는 Dockerfile/compose 파일이 포함되어 있지 않습니다.
+- 자세한 명령어/운영 팁: `DOCKER_COMMANDS.md`
 
-권장 구성:
+## DB 반영/스키마
 
-- `app`: Spring Boot jar 실행
-- `db`: mysql:8.0
-
-필요 시 아래 환경변수를 app 컨테이너에 주입하세요:
-
-- `SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/expense_tracker?...`
-- `SPRING_DATASOURCE_USERNAME=root`
-- `SPRING_DATASOURCE_PASSWORD=...`
-
-## 인증/권한 모델
-
-- `/api/import/**`, `/api/dashboard/**`는 로그인 필요(401)
-- 미로그인 상태에서 호출 시 로그인 모달이 열리고 안내 메시지 표시
-- 저장/조회 데이터는 `createdBy`(로그인 username) 기준으로 필터링
+- 전체 스키마 문서: `DATABASE_SCHEMA.md`
+- 대출 월별 상환이력 테이블(`loan_payment_history`) 생성/제약 반영 SQL: `DOCKER_COMMANDS.md` 참고
 
 ## 프로젝트 구조(주요)
 
 ```text
 src/main/java/com/example/Expense_Tracker_App/
-  controller/        # Auth/Import/Dashboard API
-  service/           # PDF 파싱, 확정 저장, 대시보드 집계
-  repository/        # JPA Repository
-  entity/            # Transaction, User
+  controller/
+  service/
+  repository/
+  entity/
 src/main/resources/
   templates/index.html
   static/script.js
@@ -126,73 +84,9 @@ src/main/resources/
   application.properties
 ```
 
-## DB 스키마(테이블/컬럼)
-
-JPA Entity 기준으로 아래 테이블이 생성/관리됩니다.
-
-### `users`
-
-- `id` (PK)
-- `username`
-- `password`
-- `role`
-- `created_at`
-
-### `transactions`
-
-- `id` (PK)
-- `provider`
-- `tx_year`
-- `tx_month`
-- `tx_date`
-- `description`
-- `amount`
-- `category`
-- `created_at`
-- `updated_at`
-- `created_by`
-- `updated_by`
-- `confirmed`
-- `confirmed_at`
-- `confirmed_by`
-
-### `fixed_expenses`
-
-- `id` (PK)
-- `username`
-- `title`
-- `account`
-- `amount`
-- `category`
-- `billing_day`
-- `memo`
-- `status`
-- `created_at`
-- `updated_at`
-
-```sql
-CREATE TABLE fixed_expenses (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
-    title VARCHAR(100) NOT NULL,
-    account VARCHAR(50),
-    amount DECIMAL(12,2) NOT NULL,
-    category VARCHAR(50),
-    billing_day TINYINT NOT NULL,
-    memo VARCHAR(500),
-    status VARCHAR(10) DEFAULT 'ACTIVE',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_fixed_expenses_username ON fixed_expenses(username);
-```
-
 ## Troubleshooting
 
-- **PDF 비밀번호 입력창이 안 뜸**
-  - 비밀번호 오류 응답(데이터 row 없음)에도 입력창이 뜨도록 처리되어 있습니다.
-  - 브라우저 캐시 이슈가 있으면 강력 새로고침(Ctrl+F5) 후 재시도하세요.
+- CSS/JS 변경이 반영되지 않으면 브라우저 강력 새로고침(Ctrl+F5)
 
 ## License
 

@@ -42,8 +42,10 @@ public class DashboardService {
         String p = provider == null ? "ALL" : provider.trim().toUpperCase();
         boolean isAll = p.isBlank() || "ALL".equalsIgnoreCase(p);
 
+        List<String> excludedProviders = List.of("FIXED", "FIXED_INCOME");
+
         List<Transaction> list = isAll
-                ? transactionRepository.findByTxYearAndConfirmedAndCreatedBy(year, "Y", u)
+                ? transactionRepository.findByTxYearAndConfirmedAndCreatedByAndProviderNotIn(year, "Y", u, excludedProviders)
                 : transactionRepository.findByProviderAndTxYearAndConfirmedAndCreatedBy(p, year, "Y", u);
 
         List<Integer> months = new ArrayList<>();
@@ -118,6 +120,8 @@ public class DashboardService {
         String p = provider == null ? "ALL" : provider.trim().toUpperCase();
         boolean isAll = p.isBlank() || "ALL".equalsIgnoreCase(p);
 
+        List<String> excludedProviders = List.of("FIXED", "FIXED_INCOME");
+
         String u = username == null ? "" : username.trim();
         if (u.isBlank()) {
             throw new IllegalArgumentException("로그인이 필요합니다.");
@@ -126,11 +130,11 @@ public class DashboardService {
         List<Transaction> list;
         if (month == 0) {
             list = isAll
-                    ? transactionRepository.findByTxYearAndConfirmedAndCreatedBy(year, "Y", u)
+                    ? transactionRepository.findByTxYearAndConfirmedAndCreatedByAndProviderNotIn(year, "Y", u, excludedProviders)
                     : transactionRepository.findByProviderAndTxYearAndConfirmedAndCreatedBy(p, year, "Y", u);
         } else {
             list = isAll
-                    ? transactionRepository.findByTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(year, month, "Y", u)
+                    ? transactionRepository.findByTxYearAndTxMonthAndConfirmedAndCreatedByAndProviderNotInOrderByTxDateAscIdAsc(year, month, "Y", u, excludedProviders)
                     : transactionRepository.findByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(p, year, month, "Y", u);
         }
 
@@ -177,8 +181,10 @@ public class DashboardService {
         String p = provider == null ? "ALL" : provider.trim().toUpperCase();
         boolean isAll = p.isBlank() || "ALL".equalsIgnoreCase(p);
 
+        List<String> excludedProviders = List.of("FIXED", "FIXED_INCOME");
+
         List<Transaction> list = isAll
-                ? transactionRepository.findByTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(year, month, "Y", u)
+                ? transactionRepository.findByTxYearAndTxMonthAndConfirmedAndCreatedByAndProviderNotInOrderByTxDateAscIdAsc(year, month, "Y", u, excludedProviders)
                 : transactionRepository.findByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(p, year, month, "Y", u);
 
         YearMonth ym = YearMonth.of(year, month);
@@ -230,9 +236,11 @@ public class DashboardService {
         String p = provider == null ? "ALL" : provider.trim().toUpperCase();
         boolean isAll = p.isBlank() || "ALL".equalsIgnoreCase(p);
 
+        List<String> excludedProviders = List.of("FIXED", "FIXED_INCOME");
+
         LocalDate date = LocalDate.of(year, month, day);
         List<Transaction> list = isAll
-                ? transactionRepository.findByTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(year, month, date, "Y", u)
+                ? transactionRepository.findByTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByAndProviderNotInOrderByTxDateAscIdAsc(year, month, date, "Y", u, excludedProviders)
                 : transactionRepository.findByProviderAndTxYearAndTxMonthAndTxDateAndConfirmedAndCreatedByOrderByTxDateAscIdAsc(p, year, month, date, "Y", u);
 
         List<DashboardDayTxItem> items = new ArrayList<>();

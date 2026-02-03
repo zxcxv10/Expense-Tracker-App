@@ -135,3 +135,70 @@
 
 ### Unique Constraints
 - **`uk_fixed_income_auto_settings_username`**: (`username`)
+
+---
+
+## 7) `investment_assets` (투자자산)
+
+- **역할**: 투자자산 마스터(계좌/자산 분류/자산명) 및 평가금액/원가/수량 등의 관리
+
+| 컬럼명 | 타입(예상) | NULL | 설명 |
+|---|---|---:|---|
+| `id` | BIGINT | N | PK (AUTO_INCREMENT) |
+| `username` | VARCHAR(50) | N | 소유자(username) |
+| `asset_type` | VARCHAR(50) | N | 분류(예: 주식/코인/예적금 등) |
+| `account_name` | VARCHAR(100) | Y | 계좌/증권사/거래소 |
+| `asset_name` | VARCHAR(100) | N | 자산명 |
+| `quantity` | DECIMAL(18,8) | Y | 수량 |
+| `avg_buy_price` | DECIMAL(18,8) | Y | 평균 매입가 |
+| `evaluated_amount` | DECIMAL(15,2) | N | 보유금액(수동) |
+| `cost_amount` | DECIMAL(15,2) | Y | 매입원금(수동) |
+| `memo` | VARCHAR(500) | Y | 메모 |
+| `created_at` | DATETIME | Y | 생성일시 |
+| `updated_at` | DATETIME | Y | 수정일시 |
+
+---
+
+## 8) `loans` (대출 마스터)
+
+- **역할**: 대출 현황의 마스터 테이블(현재 남은 원금/월상환액 등)
+- 월별 상환 여부/이력은 `loan_payment_history`로 분리하여 관리합니다.
+
+| 컬럼명 | 타입(예상) | NULL | 설명 |
+|---|---|---:|---|
+| `id` | BIGINT | N | PK (AUTO_INCREMENT) |
+| `username` | VARCHAR(50) | N | 소유자(username) |
+| `lender` | VARCHAR(100) | Y | 금융기관 |
+| `loan_name` | VARCHAR(120) | N | 대출명 |
+| `loan_type` | VARCHAR(50) | Y | 종류(예: 주담대/신용대출 등) |
+| `principal_amount` | DECIMAL(15,2) | Y | 대출원금(참고) |
+| `remaining_principal` | DECIMAL(15,2) | N | 남은 원금(현황) |
+| `interest_rate` | DECIMAL(6,3) | Y | 금리(연 %) |
+| `repayment_type` | VARCHAR(50) | Y | 상환 방식 |
+| `monthly_payment` | DECIMAL(15,2) | Y | 월 상환액 |
+| `last_payment_ym` | VARCHAR(7) | Y | (레거시) 마지막 상환 월(YYYY-MM) |
+| `maturity_date` | DATE | Y | 만기일 |
+| `memo` | VARCHAR(500) | Y | 메모 |
+| `created_at` | DATETIME | Y | 생성일시 |
+| `updated_at` | DATETIME | Y | 수정일시 |
+
+---
+
+## 9) `loan_payment_history` (대출 월별 상환 이력)
+
+- **역할**: 월(YYYY-MM) 단위로 "상환 완료" 내역을 기록하는 이력 테이블
+- 프론트에서 선택한 월(`YYYY-MM`) 기준으로 상환 여부를 조회하여, 동일 월 중복 상환을 막고 버튼 상태를 제어합니다.
+
+| 컬럼명 | 타입(예상) | NULL | 설명 |
+|---|---|---:|---|
+| `id` | BIGINT | N | PK (AUTO_INCREMENT) |
+| `username` | VARCHAR(50) | N | 사용자(username) |
+| `loan_id` | BIGINT | N | 대출 ID(`loans.id`) |
+| `payment_ym` | VARCHAR(7) | N | 상환 월(YYYY-MM) |
+| `payment_amount` | DECIMAL(15,2) | N | 상환 처리 금액(월상환액) |
+| `remaining_after` | DECIMAL(15,2) | N | 상환 처리 후 남은 원금 스냅샷 |
+| `created_at` | DATETIME | Y | 생성일시 |
+
+### Unique Constraints
+- **`uk_lph_user_loan_ym`**: (`username`, `loan_id`, `payment_ym`)
+  - 같은 대출이 같은 월에 중복 상환 기록이 생성되는 것을 방지

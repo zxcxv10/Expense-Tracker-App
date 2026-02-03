@@ -37,7 +37,7 @@ public class ImportPreviewService {
     private static final Pattern HYUNDAI_MERCHANT_AMOUNT = Pattern.compile(
             "^(.+?)\\s+([0-9]{1,3}(?:,[0-9]{3})*)원$");
     private static final Pattern HYUNDAI_DATE_LINE = Pattern.compile(
-            "^(\\d{2})\\.\\s*(\\d{2})\\.\\s*(\\d{2})\\b.*$");
+            "^(\\d{2})\\.\\s*(\\d{1,2})\\.\\s*(\\d{1,2})\\b.*$");
 
     private static final Pattern NH_DATE_TOKEN = Pattern.compile("^\\d{4}[./-]\\d{2}[./-]\\d{2}$");
     private static final Pattern NH_TIME_TOKEN = Pattern.compile("^\\d{2}:\\d{2}:\\d{2}$");
@@ -180,6 +180,7 @@ public class ImportPreviewService {
         String[] lines = text.split("\\R");
         String lastMerchant = null;
         Double lastAmount = null;
+        String currentDateIso = null;
         int matched = 0;
 
         for (String rawLine : lines) {
@@ -193,33 +194,42 @@ public class ImportPreviewService {
                 continue;
             }
 
-            Matcher ma = HYUNDAI_MERCHANT_AMOUNT.matcher(line);
-            if (ma.matches()) {
-                String merchant = ma.group(1) == null ? "" : ma.group(1).trim();
-                Double amount = parseAmountToken(ma.group(2));
-                if (!merchant.isBlank() && amount != null) {
-                    lastMerchant = merchant;
-                    lastAmount = amount;
-                }
-                continue;
-            }
-
             Matcher dm = HYUNDAI_DATE_LINE.matcher(line);
-            if (dm.matches() && lastMerchant != null && lastAmount != null) {
+            if (dm.matches()) {
                 int yy = Integer.parseInt(dm.group(1));
                 int mm = Integer.parseInt(dm.group(2));
                 int dd = Integer.parseInt(dm.group(3));
                 int yyyy = (yy <= 69) ? 2000 + yy : 1900 + yy;
                 String dateIso = String.format("%04d-%02d-%02d", yyyy, mm, dd);
-
                 if (isValidIsoDate(dateIso)) {
-                    double amount = (lastAmount == 0.0) ? 0.0 : -Math.abs(lastAmount);
-                    rows.add(new ImportPreviewRow(dateIso, lastMerchant, amount, "카드결제"));
-                    matched++;
-                }
+                    currentDateIso = dateIso;
 
-                lastMerchant = null;
-                lastAmount = null;
+                    if (lastMerchant != null && lastAmount != null) {
+                        double amount = (lastAmount == 0.0) ? 0.0 : -Math.abs(lastAmount);
+                        rows.add(new ImportPreviewRow(currentDateIso, lastMerchant, amount, "카드결제"));
+                        matched++;
+                        lastMerchant = null;
+                        lastAmount = null;
+                    }
+                }
+                continue;
+            }
+
+            Matcher ma = HYUNDAI_MERCHANT_AMOUNT.matcher(line);
+            if (ma.matches()) {
+                String merchant = ma.group(1) == null ? "" : ma.group(1).trim();
+                Double amount = parseAmountToken(ma.group(2));
+                if (!merchant.isBlank() && amount != null) {
+                    if (currentDateIso != null) {
+                        double v = (amount == 0.0) ? 0.0 : -Math.abs(amount);
+                        rows.add(new ImportPreviewRow(currentDateIso, merchant, v, "카드결제"));
+                        matched++;
+                    } else {
+                        lastMerchant = merchant;
+                        lastAmount = amount;
+                    }
+                }
+                continue;
             }
         }
 

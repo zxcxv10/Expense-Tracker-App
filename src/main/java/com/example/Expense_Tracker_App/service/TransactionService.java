@@ -3,9 +3,12 @@ package com.example.Expense_Tracker_App.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -176,13 +179,11 @@ public class TransactionService {
             throw new IllegalArgumentException("저장할 데이터가 없습니다.");
         }
 
-        Integer targetYear = null;
-        Integer targetMonth = null;
-
         String confirmer = u;
         LocalDateTime confirmedAt = LocalDateTime.now();
 
         List<Transaction> entities = new ArrayList<>();
+        Map<YearMonth, Integer> ymCount = new LinkedHashMap<>();
         for (ImportConfirmRequest.ImportConfirmRow r : rows) {
             if (r == null) {
                 continue;
@@ -209,15 +210,8 @@ public class TransactionService {
                 continue;
             }
 
-            if (targetYear == null || targetMonth == null) {
-                targetYear = txDate.getYear();
-                targetMonth = txDate.getMonthValue();
-            } else {
-                // 한 번의 확정 저장은 반드시 동일 년/월 데이터만 허용
-                if (!targetYear.equals(txDate.getYear()) || !targetMonth.equals(txDate.getMonthValue())) {
-                    throw new IllegalArgumentException("확정 저장은 한 달(년/월) 단위로만 가능합니다. 다른 월 데이터가 섞여있습니다.");
-                }
-            }
+            YearMonth ym = YearMonth.of(txDate.getYear(), txDate.getMonthValue());
+            ymCount.put(ym, ymCount.getOrDefault(ym, 0) + 1);
 
             Transaction t = new Transaction();
             t.setProvider(p);
@@ -248,9 +242,20 @@ public class TransactionService {
             throw new IllegalArgumentException("저장 가능한 데이터가 없습니다. (오류가 있는 행은 저장되지 않습니다.)");
         }
 
-        if (targetYear != null && targetMonth != null
-                && transactionRepository.existsByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedBy(p, targetYear, targetMonth, "Y", u)) {
-            throw new IllegalStateException("이미 확정된 월입니다. 확정된 월은 수정/재저장이 불가합니다.");
+        List<String> lockedMonths = new ArrayList<>();
+        for (YearMonth ym : ymCount.keySet()) {
+            if (transactionRepository.existsByProviderAndTxYearAndTxMonthAndConfirmedAndCreatedBy(
+                    p,
+                    ym.getYear(),
+                    ym.getMonthValue(),
+                    "Y",
+                    u
+            )) {
+                lockedMonths.add(String.format("%04d-%02d", ym.getYear(), ym.getMonthValue()));
+            }
+        }
+        if (!lockedMonths.isEmpty()) {
+            throw new IllegalStateException("이미 확정된 월이 포함되어 저장할 수 없습니다: " + String.join(", ", lockedMonths));
         }
 
         transactionRepository.saveAll(entities);

@@ -4,179 +4,354 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>지출 관리</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css?v=20260130-34">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
         <div class="layout">
-            <!-- 사이드바 -->
-            <nav class="sidebar">
-                <div class="sidebar-header">
-                    <h2>지출 · 수입 관리</h2>
-                </div>
-
-                <div class="menu-section">
-                    <div class="menu-item active">
-                        <span class="menu-title">지출관리</span>
-                        <div class="sub-menu">
-                            <div class="sub-menu-item active" data-menu="preview">내역 관리</div>
-                            <div class="sub-menu-item" data-menu="dashboard">대시보드</div>
-                        </div>
-                    </div>
-                    <div class="menu-item">
-                        <span class="menu-title">고정 항목 관리</span>
-                        <div class="sub-menu">
-                            <div class="sub-menu-item" data-menu="fixed-expense">고정 항목</div>
-                        </div>
-                    </div>
-                    <div class="menu-item" id="admin-menu" style="display:none;">
-                        <span class="menu-title">관리자</span>
-                        <div class="sub-menu">
-                            <div class="sub-menu-item" data-menu="admin">사용자 관리</div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
             <!-- 메인 콘텐츠 -->
             <main class="main-content">
                 <div class="content-container">
-                    <div class="auth-bar" id="auth-bar">
-                        <div class="auth-user" id="auth-user" style="display:none;"></div>
-                        <button type="button" class="auth-btn" id="auth-open-btn">로그인</button>
-                        <button type="button" class="auth-btn" id="auth-logout-btn" style="display:none;">로그아웃</button>
+
+                    <div class="page-tabs-row">
+                        <div class="page-tabs" id="top-tabs">
+                            <button type="button" class="top-tab active" data-menu="upload">내역 업로드</button>
+                            <button type="button" class="top-tab" data-menu="fixed-expense">고정지출</button>
+                            <button type="button" class="top-tab" data-menu="assets">총 자산</button>
+                            <button type="button" class="top-tab" data-menu="preview">가계부</button>
+                            <button type="button" class="top-tab" data-menu="dashboard">대시보드</button>
+                            <button type="button" class="top-tab" data-menu="admin" id="admin-menu" style="display:none;">관리자</button>
+                        </div>
+
+                        <div class="auth-inline" id="auth-bar">
+                            <button type="button" class="auth-btn" id="auth-open-btn">로그인</button>
+
+                            <div class="auth-user-wrap" id="auth-user-wrap" style="display:none;">
+                                <div class="auth-user" id="auth-user"></div>
+                                <button type="button" class="auth-menu-btn" id="auth-menu-btn" aria-label="사용자 메뉴">⋮</button>
+                                <div class="auth-menu" id="auth-menu" style="display:none;">
+                                    <button type="button" class="auth-menu-item" id="auth-logout-menu-btn">로그아웃</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="content-panel active" id="preview-content">
+                    <div id="preview-ym-header" style="display:none;">
+                        <div class="preview-date-selector">
+                            <button type="button" class="month-nav" id="preview-month-prev" aria-label="이전 달">&#8249;</button>
+                            <select id="preview-year-month-select" class="month-select" aria-label="년도 및 월 선택">
+                                <option value="" selected>로딩...</option>
+                            </select>
+                            <button type="button" class="month-nav" id="preview-month-next" aria-label="다음 달">&#8250;</button>
+                        </div>
+
+                        <div class="form-section" id="ledger-shell" style="display:none;">
+                            <div class="preview-summary-card" id="preview-summary-card" style="display:none;">
+                                <div class="preview-month-expense-card" id="preview-month-expense-card" style="display:none;">
+                                    <div class="preview-month-expense-left">
+                                        <div class="preview-month-expense-icon" aria-hidden="true"></div>
+                                        <div class="preview-month-expense-text">
+                                            <div class="preview-month-expense-label" id="preview-month-expense-label">-</div>
+                                            <div class="preview-month-expense-value" id="preview-month-expense-value">0원</div>
+                                            <div class="preview-month-expense-breakdown" id="preview-month-expense-breakdown" style="display:none;">
+                                                <div class="preview-month-expense-breakdown-row">
+                                                    <span class="preview-month-expense-breakdown-label">계좌</span>
+                                                    <span class="preview-month-expense-breakdown-value" id="preview-month-expense-cash">0원</span>
+                                                </div>
+                                                <div class="preview-month-expense-breakdown-row">
+                                                    <span class="preview-month-expense-breakdown-label">카드</span>
+                                                    <span class="preview-month-expense-breakdown-value" id="preview-month-expense-card-amount">0원</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="preview-month-expense-link" id="preview-open-dashboard-calendar">캘린더 &gt;</button>
+                                </div>
+                                <div class="preview-provider-breakdown" id="preview-provider-breakdown" style="display:none;"></div>
+                            </div>
+
+                            <div class="preview-fixed-grid" id="preview-fixed-grid" style="display:none;">
+                                <button type="button" class="preview-fixed-card" id="preview-fixed-expense-card">
+                                    <div class="preview-fixed-left">
+                                        <div class="preview-fixed-icon icon-fixed-expense" aria-hidden="true"></div>
+                                        <div class="preview-fixed-text">
+                                            <div class="preview-fixed-label">고정 지출</div>
+                                            <div class="preview-fixed-value" id="preview-fixed-expense-value">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="preview-fixed-chevron" aria-hidden="true">&gt;</div>
+                                </button>
+
+                                <button type="button" class="preview-fixed-card" id="preview-fixed-income-card">
+                                    <div class="preview-fixed-left">
+                                        <div class="preview-fixed-icon icon-fixed-income" aria-hidden="true"></div>
+                                        <div class="preview-fixed-text">
+                                            <div class="preview-fixed-label">고정 수입</div>
+                                            <div class="preview-fixed-value" id="preview-fixed-income-value">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="preview-fixed-chevron" aria-hidden="true">&gt;</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-panel active" id="upload-content">
+                        <div class="form-section">
+                            <div class="upload-subtabs" id="upload-subtabs">
+                                <button type="button" class="upload-subtab active" data-upload-tab="upload">업로드</button>
+                                <button type="button" class="upload-subtab" data-upload-tab="history">이용내역</button>
+                            </div>
+
+                            <div class="upload-subtab-panel active" data-upload-panel="upload">
+                                <!-- 업로드 영역 -->
+                                <div class="upload-section">
+                                    <div class="form-group">
+                                        <label>은행/카드사 선택 <span class="required">*</span></label>
+                                        <div class="bank-tabs" id="bank-tabs">
+                                            <button type="button" class="bank-tab active" data-provider="TOSS">토스</button>
+                                            <button type="button" class="bank-tab" data-provider="NH">농협</button>
+                                            <button type="button" class="bank-tab" data-provider="KB">국민</button>
+                                            <button type="button" class="bank-tab" data-provider="HYUNDAI">현대카드</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group" id="pdf-password-group" style="display: none;">
+                                        <label for="pdf-password-input">PDF 비밀번호 (선택)</label>
+                                        <input type="password" id="pdf-password-input" placeholder="암호 PDF인 경우 입력">
+                                    </div>
+
+                                    <div class="upload-area" id="upload-dropzone">
+                                        <p class="upload-text">파일을 여기에 드래그하거나 클릭하여 선택하세요</p>
+                                        <p class="upload-hint">PDF 파일</p>
+                                        <input type="file" id="upload-file-input" accept=".pdf" style="display: none;">
+                                        <div class="selected-file" id="selected-file" style="display: none;">
+                                            <div class="file-info">
+                                                <span class="file-name" id="selected-file-name"></span>
+                                                <button type="button" class="file-remove-btn" id="file-remove-btn">×</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="execute-btn" id="upload-next-btn" disabled>파일 읽기</button>
+                                </div>
+                            </div>
+
+                            <div class="upload-subtab-panel" data-upload-panel="history">
+                                <div class="preview-empty-state" id="preview-empty-state">
+                                    <div class="preview-empty-title">이용내역이 없습니다.</div>
+                                    <div class="preview-empty-desc">먼저 업로드 탭에서 파일을 읽어주세요.</div>
+                                </div>
+                                <div id="preview-data-area" style="display: none;">
+                                    <div class="preview-subtitle">이용 내역</div>
+                                    <div class="preview-meta" id="preview-meta"></div>
+                                    <div class="preview-hint" id="preview-hint">오류가 있는 행은 저장되지 않습니다.</div>
+
+                                    <div class="preview-top-grid">
+                                        <div class="preview-top-card">
+                                            <div class="preview-top-title-row">
+                                                <div class="preview-top-title">일괄 편집</div>
+                                                <span class="help-tip" data-tip="선택한 내역의 카테고리를 한 번에 변경할 수 있습니다.">?</span>
+                                                <label class="preview-bulk-toggle preview-bulk-toggle-title">
+                                                    <input type="checkbox" id="preview-filter-misc-only" />
+                                                    기타만 보기
+                                                </label>
+                                            </div>
+                                            <div class="preview-bulk-bar">
+                                                <div class="preview-bulk-actions">
+                                                    <select id="preview-bulk-category" aria-label="선택 항목 카테고리 변경"></select>
+                                                    <button type="button" class="execute-btn outline compact-btn" id="preview-bulk-apply-btn">적용</button>
+                                                    <button type="button" class="execute-btn outline compact-btn" id="preview-bulk-clear-btn">선택 해제</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="preview-top-card form-section" id="tx-search-section">
+                                            <div class="tx-search-header-row">
+                                                <div class="preview-top-title">검색/필터 (확정 데이터)</div>
+                                                <div class="tx-search-header-actions">
+                                                    <div id="confirm-actions"></div>
+                                                </div>
+                                            </div>
+                                            <div class="tx-search-clean-grid">
+                                                <div class="tx-search-field tx-search-start">
+                                                    <div class="tx-date-field">
+                                                        <input type="date" id="tx-search-start" aria-label="시작일" />
+                                                        <span class="tx-infield-label">시작일</span>
+                                                    </div>
+                                                </div>
+                                                <div class="tx-search-field tx-search-end">
+                                                    <div class="tx-date-field">
+                                                        <input type="date" id="tx-search-end" aria-label="종료일" />
+                                                        <span class="tx-infield-label">종료일</span>
+                                                    </div>
+                                                </div>
+                                                <div class="tx-search-actions-top">
+                                                    <button type="button" class="execute-btn outline compact-btn" id="tx-search-reset">초기화</button>
+                                                </div>
+
+                                                <div class="tx-search-field tx-search-size">
+                                                    <select id="tx-search-size" aria-label="표시">
+                                                        <option value="20" selected>20</option>
+                                                        <option value="50">50</option>
+                                                        <option value="100">100</option>
+                                                    </select>
+                                                </div>
+                                                <div class="tx-search-actions-bottom">
+                                                    <button type="button" class="execute-btn compact-btn" id="tx-search-btn">검색</button>
+                                                </div>
+
+                                                <div class="tx-search-confirm">
+                                                    <button type="button" class="execute-btn" id="preview-save-btn">확정 저장</button>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 프리뷰 테이블 -->
+                                    <div class="table-wrap">
+                                        <table class="preview-table" id="preview-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:42px; text-align:center;">
+                                                        <input type="checkbox" id="preview-select-all" />
+                                                    </th>
+                                                    <th class="sortable" data-sort-key="date">날짜</th>
+                                                    <th class="sortable" data-sort-key="description">내용</th>
+                                                    <th class="sortable" data-sort-key="txType">구분</th>
+                                                    <th class="sortable" data-sort-key="txDetail">거래내용</th>
+                                                    <th class="sortable" data-sort-key="amount">금액</th>
+                                                    <th class="sortable" data-sort-key="postBalance">거래후 잔액</th>
+                                                    <th class="sortable" data-sort-key="category">카테고리</th>
+                                                    <th>수정</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="preview-tbody"></tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="preview-pagination" id="preview-pagination"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-panel" id="preview-content">
                         <div class="panel-header">
-                            <h1>데이터 관리</h1>
                             <p class="panel-description" id="preview-provider-info"></p>
                         </div>
+                    </div>
+
+                    <div class="content-panel" id="assets-content">
+                        <div class="panel-header">
+                            <h1>총 자산</h1>
+                            <p class="panel-description">계좌/카드/고정 항목을 포함한 자산 현황</p>
+                        </div>
                         <div class="form-section">
-                            <div class="form-group">
-                                <div class="year-tabs" id="preview-year-tabs"></div>
+                            <div class="dashboard-tabs" id="assets-tabs">
+                                <button type="button" class="dashboard-tab active" data-tab="total">총 자산</button>
+                                <button type="button" class="dashboard-tab" data-tab="loan">대출현황</button>
                             </div>
-                            <!-- 월 탭 -->
-                            <div class="month-tabs" id="month-tabs">
-                                <!-- JS로 1~12월 탭 생성 -->
+                            <div class="dashboard-tab-content active" data-tab-panel="total">
+                                <div id="assets-total-panel">
+                                    <div class="form-section-header">
+                                        <button type="button" class="execute-btn compact-btn" id="investment-asset-open-btn">투자자산 추가</button>
+                                    </div>
+                                    <div class="fixed-expense-grid">
+                                        <div class="fixed-expense-card">
+                                            <div class="fixed-expense-summary-row">
+                                                <div class="fixed-expense-summary-label">투자자산 보유금액 합계</div>
+                                                <div class="fixed-expense-summary-value" id="investment-asset-total">0원</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="preview-meta" id="investment-asset-account-summary"></div>
+                                    <div class="table-wrap fixed-expense-table-wrap">
+                                        <table class="fixed-expense-table" id="investment-asset-table">
+                                            <colgroup>
+                                                <col style="width:110px;" />
+                                                <col style="width:90px;" />
+                                                <col style="width:140px;" />
+                                                <col style="width:90px;" />
+                                                <col style="width:110px;" />
+                                                <col style="width:120px;" />
+                                                <col style="width:120px;" />
+                                                <col style="width:120px;" />
+                                                <col style="width:110px;" />
+                                                <col style="width:140px;" />
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th>계좌/플랫폼</th>
+                                                    <th>분류</th>
+                                                    <th>자산명</th>
+                                                    <th style="width:110px;">수량</th>
+                                                    <th style="width:120px;">평단가</th>
+                                                    <th style="width:140px;">매수금액</th>
+                                                    <th style="width:140px;">보유금액(수동)</th>
+                                                    <th style="width:140px;">평가손익</th>
+                                                    <th style="width:110px;">평가손익(%)</th>
+                                                    <th style="width:160px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="investment-asset-tbody">
+                                                <tr class="empty-row"><td colspan="10">투자자산이 없습니다.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
-
-                            <!-- 업로드 영역 -->
-                            <div class="upload-section">
-                                <div class="form-group">
-                                    <label>은행/카드사 선택 <span class="required">*</span></label>
-                                    <div class="bank-tabs" id="bank-tabs">
-                                        <button type="button" class="bank-tab active" data-provider="TOSS">토스</button>
-                                        <button type="button" class="bank-tab" data-provider="NH">농협</button>
-                                        <button type="button" class="bank-tab" data-provider="KB">국민</button>
-                                        <button type="button" class="bank-tab" data-provider="HYUNDAI">현대카드</button>
-                                    </div>
-                                </div>
-
-                                <div class="form-group" id="pdf-password-group" style="display: none;">
-                                    <label for="pdf-password-input">PDF 비밀번호 (선택)</label>
-                                    <input type="password" id="pdf-password-input" placeholder="암호 PDF인 경우 입력">
-                                </div>
-
-                                <div class="upload-area" id="upload-dropzone">
-                                    <p class="upload-text">파일을 여기에 드래그하거나 클릭하여 선택하세요</p>
-                                    <p class="upload-hint">PDF 파일</p>
-                                    <input type="file" id="upload-file-input" accept=".pdf" style="display: none;">
-                                    <div class="selected-file" id="selected-file" style="display: none;">
-                                        <div class="file-info">
-                                            <span class="file-name" id="selected-file-name"></span>
-                                            <button type="button" class="file-remove-btn" id="file-remove-btn">×</button>
+                            <div class="dashboard-tab-content" data-tab-panel="loan">
+                                <div id="assets-loan-panel">
+                                    <div class="form-section-header">
+                                        <button type="button" class="execute-btn compact-btn" id="loan-open-btn">대출 추가</button>
+                                        <button type="button" class="execute-btn outline compact-btn" id="loan-copy-btn" disabled>복사</button>
+                                        <button type="button" class="execute-btn outline compact-btn" id="loan-dedupe-btn">중복정리</button>
+                                        <div class="inline-field">
+                                            <label for="loan-ym">월</label>
+                                            <input type="month" id="loan-ym" />
+                                            <span class="loan-ym-summary" id="loan-ym-summary"></span>
                                         </div>
                                     </div>
-                                </div>
-                                <button class="execute-btn" id="upload-next-btn" disabled>파일 읽기</button>
-                            </div>
-
-                            <div id="preview-data-area" style="display: none;">
-                                <div class="preview-subtitle">이용 내역</div>
-                                <div class="preview-meta" id="preview-meta"></div>
-                                <div class="preview-hint" id="preview-hint">오류가 있는 행은 저장되지 않습니다.</div>
-
-                                <div class="preview-top-grid">
-                                    <div class="preview-top-card">
-                                        <div class="preview-top-title-row">
-                                            <div class="preview-top-title">일괄 편집</div>
-                                            <span class="help-tip" data-tip="선택한 내역의 카테고리를 한 번에 변경할 수 있습니다.">?</span>
-                                            <label class="preview-bulk-toggle preview-bulk-toggle-title">
-                                                <input type="checkbox" id="preview-filter-misc-only" />
-                                                기타만 보기
-                                            </label>
-                                        </div>
-                                        <div class="preview-bulk-bar">
-                                            <div class="preview-bulk-actions">
-                                                <select id="preview-bulk-category" aria-label="선택 항목 카테고리 변경"></select>
-                                                <button type="button" class="execute-btn outline compact-btn" id="preview-bulk-apply-btn">적용</button>
-                                                <button type="button" class="execute-btn outline compact-btn" id="preview-bulk-clear-btn">선택 해제</button>
+                                    <div class="fixed-expense-grid">
+                                        <div class="fixed-expense-card">
+                                            <div class="fixed-expense-summary-row">
+                                                <div class="fixed-expense-summary-label">대출 잔액 합계(남은 원금)</div>
+                                                <div class="fixed-expense-summary-value" id="loan-total">0원</div>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div class="preview-top-card form-section" id="tx-search-section">
-                                        <div class="preview-top-title">검색/필터 (확정 데이터)</div>
-                                        <div class="tx-search-clean-grid">
-                                            <div class="tx-search-field tx-search-start">
-                                                <div class="tx-date-field">
-                                                    <input type="date" id="tx-search-start" aria-label="시작일" />
-                                                    <span class="tx-infield-label">시작일</span>
-                                                </div>
-                                            </div>
-                                            <div class="tx-search-field tx-search-end">
-                                                <div class="tx-date-field">
-                                                    <input type="date" id="tx-search-end" aria-label="종료일" />
-                                                    <span class="tx-infield-label">종료일</span>
-                                                </div>
-                                            </div>
-                                            <div class="tx-search-actions-top">
-                                                <button type="button" class="execute-btn outline compact-btn" id="tx-search-reset">초기화</button>
-                                            </div>
-
-                                            <div class="tx-search-field tx-search-size">
-                                                <select id="tx-search-size" aria-label="표시">
-                                                    <option value="20" selected>20</option>
-                                                    <option value="50">50</option>
-                                                    <option value="100">100</option>
-                                                </select>
-                                            </div>
-                                            <div class="tx-search-actions-bottom">
-                                                <button type="button" class="execute-btn compact-btn" id="tx-search-btn">검색</button>
-                                            </div>
-
-                                            <div class="tx-search-confirm">
-                                                <button type="button" class="execute-btn" id="preview-save-btn">확정 저장</button>
-                                            </div>
-                                        </div>
+                                    <div class="table-wrap fixed-expense-table-wrap">
+                                        <table class="fixed-expense-table" id="loan-table">
+                                            <colgroup>
+                                                <col style="width:120px;" />
+                                                <col style="width:180px;" />
+                                                <col style="width:110px;" />
+                                                <col style="width:140px;" />
+                                                <col style="width:90px;" />
+                                                <col style="width:140px;" />
+                                                <col style="width:110px;" />
+                                                <col style="width:240px;" />
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th>기관</th>
+                                                    <th>대출명</th>
+                                                    <th>종류</th>
+                                                    <th>남은원금</th>
+                                                    <th>금리(%)</th>
+                                                    <th>월상환액</th>
+                                                    <th>만기일</th>
+                                                    <th>관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="loan-tbody">
+                                                <tr class="empty-row"><td colspan="8">대출이 없습니다.</td></tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-
-                                <!-- 프리뷰 테이블 -->
-                                <div class="table-wrap">
-                                    <table class="preview-table" id="preview-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width:42px; text-align:center;">
-                                                    <input type="checkbox" id="preview-select-all" />
-                                                </th>
-                                                <th class="sortable" data-sort-key="date">날짜</th>
-                                                <th class="sortable" data-sort-key="description">내용</th>
-                                                <th class="sortable" data-sort-key="txType">구분</th>
-                                                <th class="sortable" data-sort-key="txDetail">거래내용</th>
-                                                <th class="sortable" data-sort-key="amount">금액</th>
-                                                <th class="sortable" data-sort-key="postBalance">거래후 잔액</th>
-                                                <th class="sortable" data-sort-key="category">카테고리</th>
-                                                <th>수정</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="preview-tbody"></tbody>
-                                    </table>
-                                </div>
-
-                                <div class="preview-pagination" id="preview-pagination"></div>
                             </div>
                         </div>
                     </div>
@@ -203,6 +378,7 @@
                                     <option value="KB">국민</option>
                                     <option value="HYUNDAI">현대카드</option>
                                     <option value="FIXED">고정지출</option>
+                                    <option value="FIXED_INCOME">고정수입</option>
                                 </select>
 
                                 <label for="dashboard-month">월(상세)</label>
@@ -214,16 +390,20 @@
                             <div class="dashboard-tab-content active" data-tab-panel="analytics">
                                 <div class="dashboard-summary" id="dashboard-summary" style="display:none;">
                                     <div class="summary-card">
-                                        <div class="summary-label">총수입</div>
+                                        <div class="summary-label">계좌수입</div>
                                         <div class="summary-value" id="dashboard-summary-income">0</div>
                                     </div>
                                     <div class="summary-card">
-                                        <div class="summary-label">총지출</div>
+                                        <div class="summary-label">계좌지출</div>
                                         <div class="summary-value" id="dashboard-summary-expense">0</div>
                                     </div>
                                     <div class="summary-card">
-                                        <div class="summary-label">순이익</div>
+                                        <div class="summary-label">순현금흐름</div>
                                         <div class="summary-value" id="dashboard-summary-balance">0</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-label">카드 사용</div>
+                                        <div class="summary-value" id="dashboard-summary-card">0</div>
                                     </div>
                                     <div class="summary-mom" id="dashboard-summary-mom">전월 대비: -</div>
                                 </div>
@@ -550,6 +730,53 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="loan-modal" style="display:none;">
+        <div class="modal fixed-expense-modal">
+            <div class="modal-header">
+                <h3 id="loan-modal-title">대출 등록</h3>
+                <button type="button" class="modal-close" id="loan-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label for="loan-lender">기관</label>
+                    <input type="text" id="loan-lender" placeholder="예: 국민은행, 카카오뱅크" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-name">대출명</label>
+                    <input type="text" id="loan-name" placeholder="예: 전세대출" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-type">종류</label>
+                    <input type="text" id="loan-type" placeholder="예: 신용, 주담대, 전세" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-remaining">남은 원금</label>
+                    <input type="number" id="loan-remaining" placeholder="숫자만 입력" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-rate">금리(연 %, 선택)</label>
+                    <input type="number" id="loan-rate" placeholder="예: 4.25" step="0.01" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-monthly">월 상환액(선택)</label>
+                    <input type="number" id="loan-monthly" placeholder="숫자만 입력" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-maturity">만기일(선택)</label>
+                    <input type="date" id="loan-maturity" />
+                </div>
+                <div class="modal-field">
+                    <label for="loan-memo">메모</label>
+                    <textarea id="loan-memo" rows="3" placeholder="추가 설명을 입력하세요"></textarea>
+                </div>
+                <div class="fixed-expense-actions">
+                    <button type="button" class="execute-btn" id="loan-save-btn">추가</button>
+                    <button type="button" class="execute-btn outline" id="loan-reset-btn">초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="fixed-income-auto-modal" style="display:none;">
         <div class="modal fixed-expense-modal">
             <div class="modal-header">
@@ -748,6 +975,53 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="investment-asset-modal" style="display:none;">
+        <div class="modal fixed-expense-modal">
+            <div class="modal-header">
+                <h3 id="investment-asset-modal-title">투자자산 등록</h3>
+                <button type="button" class="modal-close" id="investment-asset-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label for="investment-asset-account">계좌/플랫폼</label>
+                    <input type="text" id="investment-asset-account" placeholder="예: 업비트, 연금계좌" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-type">분류</label>
+                    <input type="text" id="investment-asset-type" placeholder="예: 주식, 코인, ISA" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-name">자산명</label>
+                    <input type="text" id="investment-asset-name" placeholder="예: QQQ, BTC" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-qty">수량(선택)</label>
+                    <input type="number" id="investment-asset-qty" placeholder="예: 0.5, 10" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-avg">평단가(선택)</label>
+                    <input type="number" id="investment-asset-avg" placeholder="예: 42000" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-cost">매수금액(선택)</label>
+                    <input type="number" id="investment-asset-cost" placeholder="수량×평단 자동 계산" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-evaluated">보유금액(수동)</label>
+                    <input type="number" id="investment-asset-evaluated" placeholder="현재 추정 가치를 입력" />
+                </div>
+                <div class="modal-field">
+                    <label for="investment-asset-memo">메모</label>
+                    <textarea id="investment-asset-memo" rows="3" placeholder="추가 설명을 입력하세요"></textarea>
+                </div>
+                <div class="fixed-expense-actions">
+                    <button type="button" class="execute-btn" id="investment-asset-save-btn">추가</button>
+                    <button type="button" class="execute-btn outline" id="investment-asset-reset-btn">초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="dashboard-day-modal" style="display:none;">
         <div class="modal fixed-expense-modal">
             <div class="modal-header">
@@ -828,6 +1102,6 @@
         </div>
     </div>
 
-    <script src="/script.js?v=20260123-10"></script>
+    <script src="/script.js?v=20260202-01"></script>
 </body>
 </html>
